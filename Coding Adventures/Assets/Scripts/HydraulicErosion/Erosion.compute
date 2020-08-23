@@ -1,0 +1,10 @@
+﻿#pragma kernel SimulateDroplet
+
+RWStructuredBuffer<float> heightMap;
+int resolution;
+
+[numthreads(1024,1,1)]
+void SimulateDroplet(uint3 id : SV_DispatchThreadID)
+{
+	heightMap[id.x + id.y * resolution] += id.z * 100;
+}
