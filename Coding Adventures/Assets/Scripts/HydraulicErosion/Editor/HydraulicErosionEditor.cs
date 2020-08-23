@@ -22,10 +22,10 @@ public class HydraulicErosionEditor : Editor
             m_heScript.BtnGenerateHeightmap();
         }
 
-        if (GUILayout.Button("Generate Mesh"))
-        {
-            m_heScript.BtnGenerateMesh();
-        }
+        //if (GUILayout.Button("Generate Mesh"))
+        //{
+        //    m_heScript.BtnGenerateMesh();
+        //}
 
         if (GUILayout.Button($"Run Erosion ({m_heScript.GetIterations()} iterations)"))
         {

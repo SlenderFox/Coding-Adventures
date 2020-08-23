@@ -138,17 +138,17 @@ public class HydraulicErosion : MonoBehaviour
         }
         catch
         { 
-            Debug.LogError($"Error at {pPos.x} {pPos.y}");
+            Debug.LogError($"Error at {pPos.x}, {pPos.y}");
             return float.NaN;
         }
     }
 
-    private void SetHeightOnHeightMap(Vector2Int pPos, float value)
+    private void AddHeightOnHeightMap(Vector2Int pPos, float value)
     {
         if (pPos.x < 0 || pPos.x >= m_iResolution || pPos.y < 0 || pPos.y >= m_iResolution)
             return;
 
-        m_fHeightMap[pPos.x + pPos.y * m_iResolution] = value;
+        m_fHeightMap[pPos.x + pPos.y * m_iResolution] += value;
     }
 
     private void GenerateMesh()
@@ -207,9 +207,9 @@ public class HydraulicErosion : MonoBehaviour
             Droplet drop = new Droplet(new Vector2Int(Random.Range(0, m_iResolution), Random.Range(0, m_iResolution)),
                 m_fStartWater, m_fMaxSedimentCapacity);
             drop.height = GetHeightFromHeightMap(drop.position);
-            float sedimentTaken = m_fErosionSpeed;
-            drop.sediment += sedimentTaken;
-            SetHeightOnHeightMap(drop.position, GetHeightFromHeightMap(drop.position) - sedimentTaken);
+            //float sedimentTaken = m_fErosionSpeed;
+            //drop.sediment += sedimentTaken;
+            //AddHeightOnHeightMap(drop.position, -sedimentTaken);
 
             for (int j = 0; j < m_iMaxLifetime; j++)
             {
@@ -226,67 +226,74 @@ public class HydraulicErosion : MonoBehaviour
                         case 0:
                             height = GetHeightFromHeightMap(new Vector2Int(drop.position.x - 1, drop.position.y - 1));
                             if (!float.IsNaN(height) && height < drop.height)
-                                lowestPos = drop.position;
+                                lowestPos = new Vector2Int(drop.position.x - 1, drop.position.y - 1);
                             break;
                         case 1:
                             height = GetHeightFromHeightMap(new Vector2Int(drop.position.x, drop.position.y - 1));
                             if (!float.IsNaN(height) && height < drop.height)
-                                lowestPos = drop.position;
+                                lowestPos = new Vector2Int(drop.position.x, drop.position.y - 1);
                             break;
                         case 2:
                             height = GetHeightFromHeightMap(new Vector2Int(drop.position.x + 1, drop.position.y - 1));
                             if (!float.IsNaN(height) && height < drop.height)
-                                lowestPos = drop.position;
+                                lowestPos = new Vector2Int(drop.position.x + 1, drop.position.y - 1);
                             break;
                         case 3:
                             height = GetHeightFromHeightMap(new Vector2Int(drop.position.x + 1, drop.position.y));
                             if (!float.IsNaN(height) && height < drop.height)
-                                lowestPos = drop.position;
+                                lowestPos = new Vector2Int(drop.position.x + 1, drop.position.y);
                             break;
                         case 4:
                             height = GetHeightFromHeightMap(new Vector2Int(drop.position.x + 1, drop.position.y + 1));
                             if (!float.IsNaN(height) && height < drop.height)
-                                lowestPos = drop.position;
+                                lowestPos = new Vector2Int(drop.position.x + 1, drop.position.y + 1);
                             break;
                         case 5:
                             height = GetHeightFromHeightMap(new Vector2Int(drop.position.x, drop.position.y + 1));
                             if (!float.IsNaN(height) && height < drop.height)
-                                lowestPos = drop.position;
+                                lowestPos = new Vector2Int(drop.position.x, drop.position.y + 1);
                             break;
                         case 6:
                             height = GetHeightFromHeightMap(new Vector2Int(drop.position.x - 1, drop.position.y + 1));
                             if (!float.IsNaN(height) && height < drop.height)
-                                lowestPos = drop.position;
+                                lowestPos = new Vector2Int(drop.position.x - 1, drop.position.y + 1);
                             break;
                         case 7:
                             height = GetHeightFromHeightMap(new Vector2Int(drop.position.x - 1, drop.position.y));
                             if (!float.IsNaN(height) && height < drop.height)
-                                lowestPos = drop.position;
+                                lowestPos = new Vector2Int(drop.position.x - 1, drop.position.y);
                             break;
                     }
+                }
+
+                // Droplet is at the lowest position of the surrounding spots
+                if (GetHeightFromHeightMap(drop.position) <= GetHeightFromHeightMap(lowestPos))
+                {
+                    AddHeightOnHeightMap(drop.position, drop.sediment);
+                    break;
                 }
 
                 drop.position = lowestPos;
                 drop.height = GetHeightFromHeightMap(drop.position);
                 float deltaHeight = drop.prevHeight - drop.height;
                 float deltaSpeed = deltaHeight - drop.speed;
-                drop.speed += deltaSpeed;
+                drop.speed += deltaSpeed; // FIX THIS
                 drop.sedimentCapacity = drop.water * drop.speed;
                 if (drop.sediment > drop.sedimentCapacity)
                 {
-                    SetHeightOnHeightMap(drop.position, drop.sediment - drop.sedimentCapacity);
+                    // Deposit some soil
+                    AddHeightOnHeightMap(drop.position, drop.sediment - drop.sedimentCapacity); // FIX THIS
                     drop.sediment = drop.sedimentCapacity;
                 }
                 else
                 {
-                    // else erode sediment from soil < deltaHeight
-                    sedimentTaken = m_fErosionSpeed;
-                    sedimentTaken = (sedimentTaken < deltaHeight) ? sedimentTaken : deltaHeight;
+                    // Erode some soil
+                    float sedimentTaken = (m_fErosionSpeed < deltaHeight) ? m_fErosionSpeed : deltaHeight;
                     drop.sediment += sedimentTaken;
-                    SetHeightOnHeightMap(drop.position, sedimentTaken);
+                    AddHeightOnHeightMap(drop.position, -sedimentTaken);
                 }
                 // Evaporate some water
-                drop.water -= (m_fEvaporationRate <= drop.water) ? m_fEvaporationRate : drop.water;
+                drop.water -= (m_fEvaporationRate < drop.water) ? m_fEvaporationRate : drop.water;
             }
         }
     }
@@ -311,8 +318,6 @@ public class HydraulicErosion : MonoBehaviour
 
         buffer.GetData(m_fHeightMap);
         buffer.Release();
-
-        GenerateMesh();
     }
 
     public int GetIterations() { return m_inumDroplets; }
@@ -321,6 +326,7 @@ public class HydraulicErosion : MonoBehaviour
     {
         RandomiseOffset();
         GenerateHeightMap();
+        GenerateMesh();
     }
 
     public void BtnGenerateMesh()
@@ -331,10 +337,12 @@ public class HydraulicErosion : MonoBehaviour
     public void BtnRunErosion()
     {
         RunErosion();
+        GenerateMesh();
     }
 
     public void BtnRunErosionComputeShader()
     {
         RunErosionComputeShader();
+        GenerateMesh();
     }
 }
