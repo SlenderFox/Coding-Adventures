@@ -7,37 +7,45 @@ public class HydraulicErosion : MonoBehaviour
 {
     [Space(6)]
     [Header("Mesh Settings")]
-    [SerializeField]
+    [SerializeField, Tooltip("The rendered map will update to setting changes in real-time")]
     private bool m_bLiveUpdate = false;
-    [SerializeField, Range(2, 256), Tooltip("The length of one edge, size will be squared")]
-    private short m_iResolution = 12;
-    [SerializeField, Range(1, 50)]
-    private float m_fScale = 1;
-    [SerializeField, Range(0.01f, 10)]
-    private float m_fHeightScale = 1;
-    [SerializeField, Range(1, 20)]
-    private sbyte m_sbNoiseLayers = 4;
+    [SerializeField, Range(2, 256), Tooltip("The length of one edge in vertices," +
+        " full map size will be this number squared")]
+    private short m_sResolution = 32;
+    [SerializeField, Range(1, 50), Tooltip("How large the map will appear in the world")]
+    private short m_sMapScale = 1;
+    [SerializeField, Range(1, 50), Tooltip("The size of the Perlin noise")]
+    private float m_fNoiseScalar = 1.7f;
+    [SerializeField, Range(0.0001f, 1), Tooltip("The intensity of the Perlin noise")]
+    private float m_fHeightScalar = 0.3f;
+    [SerializeField, Range(1, 20), Tooltip("How many times the perlin noise is sampled," +
+        " each subsiquent sample has increased scale and reduced intensity")]
+    private sbyte m_sbNoiseLayers = 10;
 
     [Header("Erosion Settings")]
     [SerializeField]
     private ComputeShader m_cpErosion = null;
-    [SerializeField, Min(1024)]
+    [SerializeField, Min(1024), Tooltip("The number of droplets simulated, more droplets = more erosion")]
     private int m_inumDroplets = 1024;
-    [SerializeField, Min(1)]
-    private int m_iMaxLifetime = 90;
-    [SerializeField, Range(0.00001f, 0.5f)]
+    [SerializeField, Min(1), Tooltip("The maximum amount of iterations done per droplet")]
+    private short m_sMaxLifetime = 90;
+    [SerializeField, Range(0.00001f, 0.5f), Tooltip("How fast each droplet collects sediment from the ground")]
     private float m_fErosionSpeed = 0.01f;
-    [SerializeField, Min(0)]
+    [SerializeField, Min(0), Tooltip("The limit to how much sediment a single droplet can hold")]
     private float m_fMaxSedimentCapacity = 3;
-    [SerializeField, Min(0.01f)]
+    [SerializeField, Min(0.01f), Tooltip("How much water the droplets will start with," +
+        " more = more sediment carried")]
     private float m_fStartWater = 2;
-    [SerializeField]
+    [SerializeField, Tooltip("How much water is lost each step")]
     private float m_fEvaporationRate = 0.01f;
 
-    private float[] m_fHeightMap;
-    private Vector2[] m_v2Offset;
-    private Mesh m_mMesh;
+    private float[] m_fHeightMap;   // 1d array for all the heights in the terrain
+    private Vector2[] m_v2Offset;   // The offset of the Perlin noise
+    private Mesh m_mMesh;           // Reference to the mesh used to display the terrain
 
+    /// <summary>
+    /// The Droplet struct handles all the data for each droplet
+    /// </summary>
     internal struct Droplet
     {
         internal Droplet(Vector2Int pPosition, float pWater, float pSedimentCapacity)
@@ -60,18 +68,25 @@ public class HydraulicErosion : MonoBehaviour
         internal float speed;
     }
 
+    /// <summary>
+    /// Start is called once before the first frame
+    /// </summary>
     private void Start()
     {
         m_mMesh = new Mesh();
         gameObject.GetComponent<MeshFilter>().sharedMesh = m_mMesh;
-        m_fHeightMap = new float[m_iResolution * m_iResolution];
+        m_fHeightMap = new float[m_sResolution * m_sResolution];
         m_v2Offset = new Vector2[m_sbNoiseLayers];
         GenerateHeightMap();
         GenerateMesh();
     }
 
+    /// <summary>
+    /// Update is called once per frame
+    /// </summary>
     private void Update()
     {
+        // This could be optimised to only be called when a setting is changed
         if (m_bLiveUpdate)
         {
             UpdateNoiseLayers();
@@ -80,6 +95,9 @@ public class HydraulicErosion : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// When new noise layers are added or removed the array needs to be resized
+    /// </summary>
     private void UpdateNoiseLayers()
     {
         Vector2[] temp = m_v2Offset;
@@ -98,6 +116,9 @@ public class HydraulicErosion : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Shifts the perlin noise offset to a random position for each noise layer
+    /// </summary>
     private void RandomiseOffset()
     {
         m_v2Offset = new Vector2[m_sbNoiseLayers];
@@ -108,33 +129,42 @@ public class HydraulicErosion : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Loops through each point in the height map array and samples the height from Perlin noise
+    /// </summary>
     private void GenerateHeightMap()
     {
-        m_fHeightMap = new float[m_iResolution * m_iResolution];
-        for (int y = 0; y < m_iResolution; y++)
+        m_fHeightMap = new float[m_sResolution * m_sResolution];
+        for (int y = 0; y < m_sResolution; y++)
         {
-            for (int x = 0; x < m_iResolution; x++)
+            for (int x = 0; x < m_sResolution; x++)
             {
-                int i = x + y * m_iResolution;
+                int i = x + y * m_sResolution;
                 for (int l = 0; l < m_sbNoiseLayers; l++)
                 {
                     m_fHeightMap[i] += Mathf.PerlinNoise(
-                        m_v2Offset[l].x + (x * m_fScale * (l + 1)) / m_iResolution,
-                        m_v2Offset[l].y + (y * m_fScale * (l + 1)) / m_iResolution)
-                        * m_fHeightScale / (l + 1);
+                        m_v2Offset[l].x + (x * m_fNoiseScalar * (l + 1)) / m_sResolution,
+                        m_v2Offset[l].y + (y * m_fNoiseScalar * (l + 1)) / m_sResolution)
+                        * m_fHeightScalar / (l + 1);
                 }
             }
         }
     }
     
+    /// <summary>
+    /// Samples the height from a position in the height map,
+    /// values outside the range will return NaN
+    /// </summary>
+    /// <param name="pPos">The position on the heightmap in 2d space</param>
+    /// <returns>The height at the point</returns>
     private float GetHeightFromHeightMap(Vector2Int pPos)
     {
-        if (pPos.x < 0 || pPos.x >= m_iResolution || pPos.y < 0 || pPos.y >= m_iResolution)
-            return float.NaN;
-
         try
         { 
-            return m_fHeightMap[pPos.x + pPos.y * m_iResolution];
+            if (pPos.x < 0 || pPos.x >= m_sResolution || pPos.y < 0 || pPos.y >= m_sResolution)
+                return float.NaN;
+
+            return m_fHeightMap[pPos.x + pPos.y * m_sResolution];
         }
         catch
         { 
@@ -143,55 +173,85 @@ public class HydraulicErosion : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Does an addition operation to a position in the height map array,
+    /// negative numbers can be used to subtract
+    /// </summary>
+    /// <param name="pPos">The position on the heightmap in 2d space</param>
+    /// <param name="value">The value to be added (or subtracted)</param>
     private void AddHeightOnHeightMap(Vector2Int pPos, float value)
     {
-        if (pPos.x < 0 || pPos.x >= m_iResolution || pPos.y < 0 || pPos.y >= m_iResolution)
-            return;
+        try
+        {
+            if (pPos.x < 0 || pPos.x >= m_sResolution || pPos.y < 0 || pPos.y >= m_sResolution)
+                return;
 
-        m_fHeightMap[pPos.x + pPos.y * m_iResolution] += value;
+            m_fHeightMap[pPos.x + pPos.y * m_sResolution] += value;
+        }
+        catch
+        {
+            Debug.LogError($"Error at {pPos.x}, {pPos.y}");
+        }
     }
 
+    /// <summary>
+    /// Generates the 3d mesh based on the height map array
+    /// </summary>
     private void GenerateMesh()
     {
-        Vector3[] vertices = new Vector3[m_iResolution * m_iResolution];
-        int[] triangles = new int[(m_iResolution - 1) * (m_iResolution - 1) * 6];
+        // Initialise required values
+        Vector3[] vertices = new Vector3[m_sResolution * m_sResolution];
+        int[] triangles = new int[(m_sResolution - 1) * (m_sResolution - 1) * 6];
         int triIndex = 0;
+        // Either store the previous uv or create a new one
         Vector2[] uv = (m_mMesh.uv.Length == vertices.Length) ? m_mMesh.uv : new Vector2[vertices.Length];
 
-        for (int y = 0; y < m_iResolution; y++)
+        // Loop through each position in the height map
+        for (int y = 0; y < m_sResolution; y++)
         {
-            for (int x = 0; x < m_iResolution; x++)
+            for (int x = 0; x < m_sResolution; x++)
             {
-                int i = x + y * m_iResolution;
+                // Convert the 2d coord to 1d
+                int i = x + y * m_sResolution;
+                // For each vertex the x and z values are offset the all values are scaled
                 vertices[i] = new Vector3(
-                    (x + .5f - m_iResolution * .5f) / (m_iResolution - 1) * 20,
-                    m_fHeightMap[i],
-                    (y + .5f - m_iResolution * .5f) / (m_iResolution - 1) * 20);
-                uv[i].y = m_fHeightMap[i];
+                    (x - m_sResolution * .5f + .5f) / (m_sResolution - 1) * m_sMapScale,
+                    m_fHeightMap[i] * m_sMapScale,
+                    (y - m_sResolution * .5f + .5f) / (m_sResolution - 1) * m_sMapScale);
+                uv[i].y = m_fHeightMap[i];  // Tbh I have no idea what this does
 
-                if (x != m_iResolution - 1 && y != m_iResolution - 1)
+                // Stitches together the vertices into triangles
+                if (x != m_sResolution - 1 && y != m_sResolution - 1)
                 {
                     triangles[triIndex] = i;
-                    triangles[triIndex + 1] = i + m_iResolution;
-                    triangles[triIndex + 2] = i + m_iResolution + 1;
+                    triangles[triIndex + 1] = i + m_sResolution;
+                    triangles[triIndex + 2] = i + m_sResolution + 1;
 
                     triangles[triIndex + 3] = i;
-                    triangles[triIndex + 4] = i + m_iResolution + 1;
+                    triangles[triIndex + 4] = i + m_sResolution + 1;
                     triangles[triIndex + 5] = i + 1;
                     triIndex += 6;
                 }
             }
         }
-        // Recalibrate the mesh
+        // Clear all data in the mesh
         m_mMesh.Clear();
+        // Apply the new data to the mesh
         m_mMesh.vertices = vertices;
         m_mMesh.triangles = triangles;
         m_mMesh.uv = uv;
+        // Recalculate mesh data
         m_mMesh.RecalculateNormals();
-        m_mMesh.MarkModified();
+        m_mMesh.RecalculateBounds();
+        m_mMesh.RecalculateTangents();
+        // Optimise and mark as modified (for good measure)
         m_mMesh.Optimize();
+        m_mMesh.MarkModified();
     }
 
+    /// <summary>
+    /// Simulates water erosion, this function does it on the cpu
+    /// </summary>
     private void RunErosion()
     {
         // Verifies there is a heightmap to work with
@@ -202,24 +262,32 @@ public class HydraulicErosion : MonoBehaviour
             GenerateMesh();
         }
 
+        // To save memory allocations allocate the droplet outside the for loop
+        Droplet drop;
+
+        // Loop through each and every droplet (slow)
         for (int i = 0; i < m_inumDroplets; i++)
         {
-            Droplet drop = new Droplet(new Vector2Int(Random.Range(0, m_iResolution), Random.Range(0, m_iResolution)),
+            // Initialise the droplet
+            drop = new Droplet(new Vector2Int(Random.Range(0, m_sResolution), Random.Range(0, m_sResolution)),
                 m_fStartWater, m_fMaxSedimentCapacity);
             drop.height = GetHeightFromHeightMap(drop.position);
             //float sedimentTaken = m_fErosionSpeed;
             //drop.sediment += sedimentTaken;
             //AddHeightOnHeightMap(drop.position, -sedimentTaken);
 
-            for (int j = 0; j < m_iMaxLifetime; j++)
+            // Each loop is a step in the droplets life (slow)
+            for (int j = 0; j < m_sMaxLifetime; j++)
             {
+                // Update the previous height
                 drop.prevHeight = drop.height;
 
                 // Calculate the lowest point next to the droplet and update the position to it
+                // There might be a better way to do this
                 Vector2Int lowestPos = new Vector2Int(int.MaxValue, int.MaxValue);
                 for (int g = 0; g < 8; g++)
                 {
-                    float height = 0;
+                    float height;
                     // Rotates counter-clockwise
                     switch (g)
                     {
@@ -273,16 +341,25 @@ public class HydraulicErosion : MonoBehaviour
                     break;
                 }
 
+                // This is all a mess
+                // Update the droplets position to the lowest adjacent point
                 drop.position = lowestPos;
+                // Update the droplets height (I could get this when finding the lowest adjacent point)
                 drop.height = GetHeightFromHeightMap(drop.position);
+                // Find the delta height
                 float deltaHeight = drop.prevHeight - drop.height;
-                float deltaSpeed = deltaHeight - drop.speed;
+                // Find the delta speed (possibly wrong)
+                float deltaSpeed = deltaHeight * drop.speed;
+                // Update the speed
                 drop.speed += deltaSpeed; // FIX THIS
-                drop.sedimentCapacity = drop.water * drop.speed;
+                // Calculate the new sediment capacity based on remaining water and droplet speed
+                drop.sedimentCapacity = (drop.water * drop.speed < m_fMaxSedimentCapacity)
+                    ? drop.water * drop.speed : m_fMaxSedimentCapacity;
+
                 if (drop.sediment > drop.sedimentCapacity)
                 {
                     // Deposit some soil
-                    AddHeightOnHeightMap(drop.position, drop.sediment - drop.sedimentCapacity); // FIX THIS
+                    AddHeightOnHeightMap(drop.position, drop.sediment - drop.sedimentCapacity);
                     drop.sediment = drop.sedimentCapacity;
                 }
                 else
@@ -298,6 +375,9 @@ public class HydraulicErosion : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Simulates water erosion, this function does it on the gpu
+    /// </summary>
     private void RunErosionComputeShader()
     {
         // Verifies there is a heightmap to work with
@@ -308,18 +388,25 @@ public class HydraulicErosion : MonoBehaviour
             GenerateMesh();
         }
 
+        // Sets the compute shader data
         ComputeBuffer buffer = new ComputeBuffer(m_fHeightMap.Length, sizeof(float));
         buffer.SetData(m_fHeightMap);
         m_cpErosion.SetBuffer(0, "heightMap", buffer);
-        m_cpErosion.SetInt("resolution", m_iResolution);
+        m_cpErosion.SetInt("resolution", m_sResolution);
 
+        // Dispach the compute shader
         int numGroups = m_inumDroplets / 1024;
         m_cpErosion.Dispatch(0, numGroups, 1, 1);
 
+        // Retrieve the data and release the buffer
         buffer.GetData(m_fHeightMap);
         buffer.Release();
     }
 
+    /// <summary>
+    /// Returns how many droplets are going to be simulated
+    /// </summary>
+    /// <returns>How many droplets are going to be simulated</returns>
     public int GetIterations() { return m_inumDroplets; }
 
     public void BtnGenerateHeightmap()
