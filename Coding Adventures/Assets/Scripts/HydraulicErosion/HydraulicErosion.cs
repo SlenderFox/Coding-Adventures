@@ -9,7 +9,7 @@ public class HydraulicErosion : MonoBehaviour
     [Header("Mesh Settings")]
     [SerializeField, Tooltip("The rendered map will update to setting changes in real-time")]
     private bool m_bLiveUpdate = false;
-    [SerializeField, Range(2, 256), Tooltip("The length of one edge in vertices," +
+    [SerializeField, Range(2, 255), Tooltip("The length of one edge in vertices," +
         " full map size will be this number squared")]
     private short m_sResolution = 32;
     [SerializeField, Range(1, 50), Tooltip("How large the map will appear in the world")]
@@ -25,7 +25,7 @@ public class HydraulicErosion : MonoBehaviour
     [Header("Erosion Settings")]
     [SerializeField]
     private ComputeShader m_cpErosion = null;
-    [SerializeField, Min(1024), Tooltip("The number of droplets simulated, more droplets = more erosion")]
+    [SerializeField, /*Min(1024),*/ Tooltip("The number of droplets simulated, more droplets = more erosion")]
     private int m_inumDroplets = 1024;
     [SerializeField, Min(1), Tooltip("The maximum amount of iterations done per droplet")]
     private short m_sMaxLifetime = 90;
@@ -159,18 +159,10 @@ public class HydraulicErosion : MonoBehaviour
     /// <returns>The height at the point</returns>
     private float GetHeightFromHeightMap(Vector2Int pPos)
     {
-        try
-        { 
-            if (pPos.x < 0 || pPos.x >= m_sResolution || pPos.y < 0 || pPos.y >= m_sResolution)
-                return float.NaN;
+        if (pPos.x < 0 || pPos.x >= m_sResolution || pPos.y < 0 || pPos.y >= m_sResolution)
+            return 0;
 
-            return m_fHeightMap[pPos.x + pPos.y * m_sResolution];
-        }
-        catch
-        { 
-            Debug.LogError($"Error at {pPos.x}, {pPos.y}");
-            return float.NaN;
-        }
+        return m_fHeightMap[pPos.x + pPos.y * m_sResolution];
     }
 
     /// <summary>
@@ -178,20 +170,15 @@ public class HydraulicErosion : MonoBehaviour
     /// negative numbers can be used to subtract
     /// </summary>
     /// <param name="pPos">The position on the heightmap in 2d space</param>
-    /// <param name="value">The value to be added (or subtracted)</param>
-    private void AddHeightOnHeightMap(Vector2Int pPos, float value)
+    /// <param name="pValue">The value to be added (or subtracted)</param>
+    private void AddHeightOnHeightMap(Vector2Int pPos, float pValue)
     {
-        try
-        {
-            if (pPos.x < 0 || pPos.x >= m_sResolution || pPos.y < 0 || pPos.y >= m_sResolution)
-                return;
+        if (pPos.x < 0 || pPos.x >= m_sResolution || pPos.y < 0 || pPos.y >= m_sResolution)
+            return;
 
-            m_fHeightMap[pPos.x + pPos.y * m_sResolution] += value;
-        }
-        catch
-        {
-            Debug.LogError($"Error at {pPos.x}, {pPos.y}");
-        }
+        m_fHeightMap[pPos.x + pPos.y * m_sResolution] += pValue;
+        if (m_fHeightMap[pPos.x + pPos.y * m_sResolution] < 0)
+		    m_fHeightMap[pPos.x + pPos.y * m_sResolution] = 0;
     }
 
     /// <summary>
@@ -282,55 +269,49 @@ public class HydraulicErosion : MonoBehaviour
                 // Update the previous height
                 drop.prevHeight = drop.height;
 
-                // Calculate the lowest point next to the droplet and update the position to it
+                // Calculate the lowest adjacent point and update the droplet position to it
                 // There might be a better way to do this
                 Vector2Int lowestPos = new Vector2Int(int.MaxValue, int.MaxValue);
+                float lowestHeight = int.MaxValue;
+                Vector2Int posCycle;
+                float cycleHeight;
                 for (int g = 0; g < 8; g++)
                 {
-                    float height;
                     // Rotates counter-clockwise
                     switch (g)
                     {
                         case 0:
-                            height = GetHeightFromHeightMap(new Vector2Int(drop.position.x - 1, drop.position.y - 1));
-                            if (!float.IsNaN(height) && height < drop.height)
-                                lowestPos = new Vector2Int(drop.position.x - 1, drop.position.y - 1);
+                            posCycle = new Vector2Int(drop.position.x - 1, drop.position.y - 1);
                             break;
                         case 1:
-                            height = GetHeightFromHeightMap(new Vector2Int(drop.position.x, drop.position.y - 1));
-                            if (!float.IsNaN(height) && height < drop.height)
-                                lowestPos = new Vector2Int(drop.position.x, drop.position.y - 1);
+                            posCycle = new Vector2Int(drop.position.x, drop.position.y - 1);
                             break;
                         case 2:
-                            height = GetHeightFromHeightMap(new Vector2Int(drop.position.x + 1, drop.position.y - 1));
-                            if (!float.IsNaN(height) && height < drop.height)
-                                lowestPos = new Vector2Int(drop.position.x + 1, drop.position.y - 1);
+                            posCycle = new Vector2Int(drop.position.x + 1, drop.position.y - 1);
                             break;
                         case 3:
-                            height = GetHeightFromHeightMap(new Vector2Int(drop.position.x + 1, drop.position.y));
-                            if (!float.IsNaN(height) && height < drop.height)
-                                lowestPos = new Vector2Int(drop.position.x + 1, drop.position.y);
+                            posCycle = new Vector2Int(drop.position.x + 1, drop.position.y);
                             break;
                         case 4:
-                            height = GetHeightFromHeightMap(new Vector2Int(drop.position.x + 1, drop.position.y + 1));
-                            if (!float.IsNaN(height) && height < drop.height)
-                                lowestPos = new Vector2Int(drop.position.x + 1, drop.position.y + 1);
+                            posCycle = new Vector2Int(drop.position.x + 1, drop.position.y + 1);
                             break;
                         case 5:
-                            height = GetHeightFromHeightMap(new Vector2Int(drop.position.x, drop.position.y + 1));
-                            if (!float.IsNaN(height) && height < drop.height)
-                                lowestPos = new Vector2Int(drop.position.x, drop.position.y + 1);
+                            posCycle = new Vector2Int(drop.position.x, drop.position.y + 1);
                             break;
                         case 6:
-                            height = GetHeightFromHeightMap(new Vector2Int(drop.position.x - 1, drop.position.y + 1));
-                            if (!float.IsNaN(height) && height < drop.height)
-                                lowestPos = new Vector2Int(drop.position.x - 1, drop.position.y + 1);
+                            posCycle = new Vector2Int(drop.position.x - 1, drop.position.y + 1);
                             break;
                         case 7:
-                            height = GetHeightFromHeightMap(new Vector2Int(drop.position.x - 1, drop.position.y));
-                            if (!float.IsNaN(height) && height < drop.height)
-                                lowestPos = new Vector2Int(drop.position.x - 1, drop.position.y);
+                        default:
+                            posCycle = new Vector2Int(drop.position.x - 1, drop.position.y);
                             break;
+                    }
+
+                    cycleHeight = GetHeightFromHeightMap(posCycle);
+                    if (cycleHeight < drop.height && cycleHeight < lowestHeight)
+                    {
+                        lowestPos = posCycle;
+                        lowestHeight = cycleHeight;
                     }
                 }
 
@@ -341,13 +322,13 @@ public class HydraulicErosion : MonoBehaviour
                     break;
                 }
 
-                // This is all a mess
                 // Update the droplets position to the lowest adjacent point
                 drop.position = lowestPos;
                 // Update the droplets height (I could get this when finding the lowest adjacent point)
                 drop.height = GetHeightFromHeightMap(drop.position);
                 // Find the delta height
                 float deltaHeight = drop.prevHeight - drop.height;
+                // This is all a mess
                 // Find the delta speed (possibly wrong)
                 float deltaSpeed = deltaHeight * drop.speed;
                 // Update the speed
@@ -365,12 +346,12 @@ public class HydraulicErosion : MonoBehaviour
                 else
                 {
                     // Erode some soil
-                    float sedimentTaken = (m_fErosionSpeed < deltaHeight) ? m_fErosionSpeed : deltaHeight;
+                    float sedimentTaken = Mathf.Min(m_fErosionSpeed, deltaHeight);
                     drop.sediment += sedimentTaken;
                     AddHeightOnHeightMap(drop.position, -sedimentTaken);
                 }
                 // Evaporate some water
-                drop.water -= (m_fEvaporationRate < drop.water) ? m_fEvaporationRate : drop.water;
+                drop.water -= Mathf.Min(m_fEvaporationRate, drop.water);
             }
         }
     }
@@ -393,9 +374,15 @@ public class HydraulicErosion : MonoBehaviour
         buffer.SetData(m_fHeightMap);
         m_cpErosion.SetBuffer(0, "heightMap", buffer);
         m_cpErosion.SetInt("resolution", m_sResolution);
+        m_cpErosion.SetInt("maxLifetime", m_sMaxLifetime);
+        m_cpErosion.SetFloat("erosionSpeed", m_fErosionSpeed);
+        m_cpErosion.SetFloat("maxSedimentCapacity", m_fMaxSedimentCapacity);
+        m_cpErosion.SetFloat("water", m_fStartWater);
+        m_cpErosion.SetFloat("evaporationRate", m_fEvaporationRate);
 
+        // Calculate the amount of groups requested
+        int numGroups = m_inumDroplets / 1024 + 1;
         // Dispach the compute shader
-        int numGroups = m_inumDroplets / 1024;
         m_cpErosion.Dispatch(0, numGroups, 1, 1);
 
         // Retrieve the data and release the buffer
@@ -423,12 +410,14 @@ public class HydraulicErosion : MonoBehaviour
 
     public void BtnRunErosion()
     {
+        m_bLiveUpdate = false;
         RunErosion();
         GenerateMesh();
     }
 
     public void BtnRunErosionComputeShader()
     {
+        m_bLiveUpdate = false;
         RunErosionComputeShader();
         GenerateMesh();
     }
