@@ -2,7 +2,6 @@
 #define MAX_VALUE 999999
 
 RWStructuredBuffer<float> heightMap;
-RWTexture2D<float2> noiseData;
 uint resolution;
 uint maxLifetime;
 float erosionSpeed;
@@ -36,11 +35,19 @@ void AddHeightOnHeightMap(uint2 pPos, float pValue)
 		heightMap[pPos.x + pPos.y * resolution] = 0;
 }
 
-[numthreads(1024,1,1)]
-void SimulateDroplet(uint3 id : SV_DispatchThreadID)
+float2 Rand_2_0004(float2 uv)
+{
+	float noiseX = (frac(sin(dot(uv, float2(12.9898, 78.233))) * 43758.5453));
+	float noiseY = (frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453));
+	return float2(noiseX, noiseY) * 0.004;
+}
+
+void DoDropletSimulation(uint id)
 {
 	// Initialise some data for the droplet
-	uint2 position = { 0, 0 };
+	//float2 temp = { id, id * resolution };
+	//uint2 position = { 0, 0 };
+	uint2 position = { id % resolution, id / resolution };
 	float height = GetHeightFromHeightMap(position);
 	float prevHeight = MAX_VALUE;
 	float deltaHeight;
@@ -63,43 +70,43 @@ void SimulateDroplet(uint3 id : SV_DispatchThreadID)
 		// Calculate the lowest adjacent point and update the droplet position to it
 		for (int j = 0; j < 8; j++)
 		{
-			switch(j)
+			switch (j)
 			{
-				case 0:
-					posCycle.x = position.x - 1;
-					posCycle.y = position.y - 1;
-					break;
-				case 1:
-					posCycle.x = position.x;
-					posCycle.y = position.y - 1;
-					break;
-				case 2:
-					posCycle.x = position.x + 1;
-					posCycle.y = position.y - 1;
-					break;
-				case 3:
-					posCycle.x = position.x + 1;
-					posCycle.y = position.y;
-					break;
-				case 4:
-					posCycle.x = position.x + 1;
-					posCycle.y = position.y + 1;
-					break;
-				case 5:
-					posCycle.x = position.x;
-					posCycle.y = position.y + 1;
-					break;
-				case 6:
-					posCycle.x = position.x - 1;
-					posCycle.y = position.y + 1;
-					break;
-				case 7:
-				default:
-					posCycle.x = position.x - 1;
-					posCycle.y = position.y;
-					break;
+			case 0:
+				posCycle.x = position.x - 1;
+				posCycle.y = position.y - 1;
+				break;
+			case 1:
+				posCycle.x = position.x;
+				posCycle.y = position.y - 1;
+				break;
+			case 2:
+				posCycle.x = position.x + 1;
+				posCycle.y = position.y - 1;
+				break;
+			case 3:
+				posCycle.x = position.x + 1;
+				posCycle.y = position.y;
+				break;
+			case 4:
+				posCycle.x = position.x + 1;
+				posCycle.y = position.y + 1;
+				break;
+			case 5:
+				posCycle.x = position.x;
+				posCycle.y = position.y + 1;
+				break;
+			case 6:
+				posCycle.x = position.x - 1;
+				posCycle.y = position.y + 1;
+				break;
+			case 7:
+			default:
+				posCycle.x = position.x - 1;
+				posCycle.y = position.y;
+				break;
 			}
-			
+
 			cycleHeight = GetHeightFromHeightMap(posCycle);
 			if (cycleHeight < height && height < lowestHeight);
 			{
@@ -139,6 +146,14 @@ void SimulateDroplet(uint3 id : SV_DispatchThreadID)
 		// Evaporate some water
 		water -= min(evaporationRate, water);
 	}
+}
 
-	heightMap[id.x] = 0;
+[numthreads(1024,1,1)]
+void SimulateDroplet(uint3 id : SV_DispatchThreadID)
+{
+	//DoDropletSimulation(id.x);
+
+	uint2 testPosition = { id.x % resolution, id.x / resolution };
+	heightMap[testPosition.x + testPosition.y * resolution] = 0;
+	//heightMap[id.x] = 0;
 }

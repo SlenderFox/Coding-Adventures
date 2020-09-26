@@ -5,7 +5,6 @@ using UnityEngine;
 [ExecuteInEditMode]
 public class HydraulicErosion : MonoBehaviour
 {
-    [Space(6)]
     [Header("Mesh Settings")]
     [SerializeField, Tooltip("The rendered map will update to setting changes in real-time")]
     private bool m_bLiveUpdate = false;
@@ -23,10 +22,6 @@ public class HydraulicErosion : MonoBehaviour
     private sbyte m_sbNoiseLayers = 10;
 
     [Header("Erosion Settings")]
-    [SerializeField]
-    private ComputeShader m_cpErosion = null;
-    [SerializeField, /*Min(1024),*/ Tooltip("The number of droplets simulated, more droplets = more erosion")]
-    private int m_inumDroplets = 1024;
     [SerializeField, Min(1), Tooltip("The maximum amount of iterations done per droplet")]
     private short m_sMaxLifetime = 90;
     [SerializeField, Range(0.00001f, 0.5f), Tooltip("How fast each droplet collects sediment from the ground")]
@@ -38,6 +33,14 @@ public class HydraulicErosion : MonoBehaviour
     private float m_fStartWater = 2;
     [SerializeField, Tooltip("How much water is lost each step")]
     private float m_fEvaporationRate = 0.01f;
+
+    [Header("Program Settings")]
+    [SerializeField]
+    private ComputeShader m_cpErosion = null;
+    [SerializeField, Range(1, 100000), Tooltip("The amount of droplets sequentially simulated on the cpu. VERY SLOW.")]
+    private int m_iNumDroplets = 10000;
+    [SerializeField, Range(1, 100), Tooltip("The amount of groups requested for the gpu")]
+    private int m_iNumGroups = 10;
 
     private float[] m_fHeightMap;   // 1d array for all the heights in the terrain
     private Vector2[] m_v2Offset;   // The offset of the Perlin noise
@@ -253,7 +256,7 @@ public class HydraulicErosion : MonoBehaviour
         Droplet drop;
 
         // Loop through each and every droplet (slow)
-        for (int i = 0; i < m_inumDroplets; i++)
+        for (int i = 0; i < m_iNumDroplets; i++)
         {
             // Initialise the droplet
             drop = new Droplet(new Vector2Int(Random.Range(0, m_sResolution), Random.Range(0, m_sResolution)),
@@ -370,9 +373,9 @@ public class HydraulicErosion : MonoBehaviour
         }
 
         // Sets the compute shader data
-        ComputeBuffer buffer = new ComputeBuffer(m_fHeightMap.Length, sizeof(float));
-        buffer.SetData(m_fHeightMap);
-        m_cpErosion.SetBuffer(0, "heightMap", buffer);
+        ComputeBuffer heightBuffer = new ComputeBuffer(m_fHeightMap.Length, sizeof(float));
+        heightBuffer.SetData(m_fHeightMap);
+        m_cpErosion.SetBuffer(0, "heightMap", heightBuffer);
         m_cpErosion.SetInt("resolution", m_sResolution);
         m_cpErosion.SetInt("maxLifetime", m_sMaxLifetime);
         m_cpErosion.SetFloat("erosionSpeed", m_fErosionSpeed);
@@ -380,21 +383,25 @@ public class HydraulicErosion : MonoBehaviour
         m_cpErosion.SetFloat("water", m_fStartWater);
         m_cpErosion.SetFloat("evaporationRate", m_fEvaporationRate);
 
-        // Calculate the amount of groups requested
-        int numGroups = m_inumDroplets / 1024 + 1;
         // Dispach the compute shader
-        m_cpErosion.Dispatch(0, numGroups, 1, 1);
+        m_cpErosion.Dispatch(0, m_iNumGroups, 1, 1);
 
         // Retrieve the data and release the buffer
-        buffer.GetData(m_fHeightMap);
-        buffer.Release();
+        heightBuffer.GetData(m_fHeightMap);
+        heightBuffer.Release();
     }
 
     /// <summary>
-    /// Returns how many droplets are going to be simulated
+    /// Returns how many droplets are going to be simulated on the cpu
     /// </summary>
-    /// <returns>How many droplets are going to be simulated</returns>
-    public int GetIterations() { return m_inumDroplets; }
+    /// <returns>How many droplets are going to be simulated on the cpu</returns>
+    public int GetNumberOfDroplets() { return m_iNumDroplets; }
+
+    /// <summary>
+    /// Returns how many droplets are going to be simulated on the gpu
+    /// </summary>
+    /// <returns>How many droplets are going to be simulated on the gpu</returns>
+    public int GetComputeShaderThreads() { return m_iNumGroups * 1024; }
 
     public void BtnGenerateHeightmap()
     {
@@ -403,8 +410,9 @@ public class HydraulicErosion : MonoBehaviour
         GenerateMesh();
     }
 
-    public void BtnGenerateMesh()
+    public void BtnRebuildMesh()
     {
+        GenerateHeightMap();
         GenerateMesh();
     }
 

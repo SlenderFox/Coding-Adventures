@@ -22,19 +22,19 @@ public class HydraulicErosionEditor : Editor
             m_heScript.BtnGenerateHeightmap();
         }
 
-        //if (GUILayout.Button("Generate Mesh"))
-        //{
-        //    m_heScript.BtnGenerateMesh();
-        //}
-
-        if (GUILayout.Button($"Run Erosion ({m_heScript.GetIterations()} iterations)"))
+        if (GUILayout.Button($"Run Erosion Sequential ({m_heScript.GetNumberOfDroplets()} iterations)"))
         {
             m_heScript.BtnRunErosion();
         }
 
-        if (GUILayout.Button($"Run Erosion Compute Shader ({m_heScript.GetIterations()} iterations)"))
+        if (GUILayout.Button($"Run Erosion Compute Shader ({m_heScript.GetComputeShaderThreads()} iterations)"))
         {
             m_heScript.BtnRunErosionComputeShader();
+        }
+
+        if (GUILayout.Button("Rebuild Mesh"))
+        {
+            m_heScript.BtnRebuildMesh();
         }
     }
 }
