@@ -17,9 +17,9 @@ public class HydraulicErosionEditor : Editor
 
         GUILayout.Space(8);
 
-        if (GUILayout.Button("Generate Heightmap"))
+        if (GUILayout.Button("Generate New Heightmap"))
         {
-            m_heScript.BtnGenerateHeightmap();
+            m_heScript.BtnGenerateNewHeightmap();
         }
 
         if (GUILayout.Button($"Run Erosion Sequential ({m_heScript.GetNumberOfDroplets()} iterations)"))

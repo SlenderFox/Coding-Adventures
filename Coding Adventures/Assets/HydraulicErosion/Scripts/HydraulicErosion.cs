@@ -1,6 +1,5 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
+using System.Runtime.InteropServices;
 
 [ExecuteInEditMode]
 public class HydraulicErosion : MonoBehaviour
@@ -42,9 +41,24 @@ public class HydraulicErosion : MonoBehaviour
     [SerializeField, Range(1, 100), Tooltip("The amount of groups requested for the gpu")]
     private int m_iNumGroups = 10;
 
-    private float[] m_fHeightMap;   // 1d array for all the heights in the terrain
-    private Vector2[] m_v2Offset;   // The offset of the Perlin noise
-    private Mesh m_mMesh;           // Reference to the mesh used to display the terrain
+    private HeightMap m_hmHeightMap;    // Struct union of 1d and 2d heightmap data
+    private Vector2[] m_v2Offset;       // The offset of the Perlin noise
+    private Mesh m_mMesh;               // Reference to the mesh used to display the terrain
+
+    [StructLayout(LayoutKind.Explicit, Size = 65025)]
+    internal struct HeightMap
+    {
+        [FieldOffset(0)]
+        internal float[,] m_v2Coords;
+        [FieldOffset(0)]
+        internal float[] m_fHeightMap;
+
+        internal HeightMap(short pResolution) : this()
+        {
+            m_fHeightMap = new float[pResolution * pResolution];
+            m_v2Coords = new float[pResolution, pResolution];
+        }
+    }
 
     /// <summary>
     /// The Droplet struct handles all the data for each droplet
@@ -78,8 +92,9 @@ public class HydraulicErosion : MonoBehaviour
     {
         m_mMesh = new Mesh();
         gameObject.GetComponent<MeshFilter>().sharedMesh = m_mMesh;
-        m_fHeightMap = new float[m_sResolution * m_sResolution];
+        m_hmHeightMap = new HeightMap(m_sResolution);
         m_v2Offset = new Vector2[m_sbNoiseLayers];
+        RandomiseOffset();
         GenerateHeightMap();
         GenerateMesh();
     }
@@ -137,7 +152,7 @@ public class HydraulicErosion : MonoBehaviour
     /// </summary>
     private void GenerateHeightMap()
     {
-        m_fHeightMap = new float[m_sResolution * m_sResolution];
+        m_hmHeightMap = new HeightMap(m_sResolution);
         for (int y = 0; y < m_sResolution; y++)
         {
             for (int x = 0; x < m_sResolution; x++)
@@ -145,7 +160,7 @@ public class HydraulicErosion : MonoBehaviour
                 int i = x + y * m_sResolution;
                 for (int l = 0; l < m_sbNoiseLayers; l++)
                 {
-                    m_fHeightMap[i] += Mathf.PerlinNoise(
+                    m_hmHeightMap.m_fHeightMap[i] += Mathf.PerlinNoise(
                         m_v2Offset[l].x + (x * m_fNoiseScalar * (l + 1)) / m_sResolution,
                         m_v2Offset[l].y + (y * m_fNoiseScalar * (l + 1)) / m_sResolution)
                         * m_fHeightScalar / (l + 1);
@@ -165,7 +180,7 @@ public class HydraulicErosion : MonoBehaviour
         if (pPos.x < 0 || pPos.x >= m_sResolution || pPos.y < 0 || pPos.y >= m_sResolution)
             return 0;
 
-        return m_fHeightMap[pPos.x + pPos.y * m_sResolution];
+        return m_hmHeightMap.m_v2Coords[pPos.x, pPos.y];
     }
 
     /// <summary>
@@ -179,9 +194,9 @@ public class HydraulicErosion : MonoBehaviour
         if (pPos.x < 0 || pPos.x >= m_sResolution || pPos.y < 0 || pPos.y >= m_sResolution)
             return;
 
-        m_fHeightMap[pPos.x + pPos.y * m_sResolution] += pValue;
-        if (m_fHeightMap[pPos.x + pPos.y * m_sResolution] < 0)
-		    m_fHeightMap[pPos.x + pPos.y * m_sResolution] = 0;
+        m_hmHeightMap.m_v2Coords[pPos.x, pPos.y] += pValue;
+        if (m_hmHeightMap.m_v2Coords[pPos.x, pPos.y] < 0)
+            m_hmHeightMap.m_v2Coords[pPos.x, pPos.y] = 0;
     }
 
     /// <summary>
@@ -206,9 +221,9 @@ public class HydraulicErosion : MonoBehaviour
                 // For each vertex the x and z values are offset the all values are scaled
                 vertices[i] = new Vector3(
                     (x - m_sResolution * .5f + .5f) / (m_sResolution - 1) * m_sMapScale,
-                    m_fHeightMap[i] * m_sMapScale,
+                    m_hmHeightMap.m_fHeightMap[i] * m_sMapScale,
                     (y - m_sResolution * .5f + .5f) / (m_sResolution - 1) * m_sMapScale);
-                uv[i].y = m_fHeightMap[i];  // Tbh I have no idea what this does
+                uv[i].y = m_hmHeightMap.m_fHeightMap[i];  // Tbh I have no idea what this does
 
                 // Stitches together the vertices into triangles
                 if (x != m_sResolution - 1 && y != m_sResolution - 1)
@@ -254,6 +269,8 @@ public class HydraulicErosion : MonoBehaviour
 
         // To save memory allocations allocate the droplet outside the for loop
         Droplet drop;
+        float deltaHeight = 0;
+        float deltaSpeed = 0;
 
         // Loop through each and every droplet (slow)
         for (int i = 0; i < m_iNumDroplets; i++)
@@ -276,7 +293,7 @@ public class HydraulicErosion : MonoBehaviour
                 // There might be a better way to do this
                 Vector2Int lowestPos = new Vector2Int(int.MaxValue, int.MaxValue);
                 float lowestHeight = int.MaxValue;
-                Vector2Int posCycle;
+                Vector2Int cyclePos;
                 float cycleHeight;
                 for (int g = 0; g < 8; g++)
                 {
@@ -284,66 +301,70 @@ public class HydraulicErosion : MonoBehaviour
                     switch (g)
                     {
                         case 0:
-                            posCycle = new Vector2Int(drop.position.x - 1, drop.position.y - 1);
+                            cyclePos = new Vector2Int(drop.position.x - 1, drop.position.y - 1);
                             break;
                         case 1:
-                            posCycle = new Vector2Int(drop.position.x, drop.position.y - 1);
+                            cyclePos = new Vector2Int(drop.position.x, drop.position.y - 1);
                             break;
                         case 2:
-                            posCycle = new Vector2Int(drop.position.x + 1, drop.position.y - 1);
+                            cyclePos = new Vector2Int(drop.position.x + 1, drop.position.y - 1);
                             break;
                         case 3:
-                            posCycle = new Vector2Int(drop.position.x + 1, drop.position.y);
+                            cyclePos = new Vector2Int(drop.position.x + 1, drop.position.y);
                             break;
                         case 4:
-                            posCycle = new Vector2Int(drop.position.x + 1, drop.position.y + 1);
+                            cyclePos = new Vector2Int(drop.position.x + 1, drop.position.y + 1);
                             break;
                         case 5:
-                            posCycle = new Vector2Int(drop.position.x, drop.position.y + 1);
+                            cyclePos = new Vector2Int(drop.position.x, drop.position.y + 1);
                             break;
                         case 6:
-                            posCycle = new Vector2Int(drop.position.x - 1, drop.position.y + 1);
+                            cyclePos = new Vector2Int(drop.position.x - 1, drop.position.y + 1);
                             break;
                         case 7:
                         default:
-                            posCycle = new Vector2Int(drop.position.x - 1, drop.position.y);
+                            cyclePos = new Vector2Int(drop.position.x - 1, drop.position.y);
                             break;
                     }
 
-                    cycleHeight = GetHeightFromHeightMap(posCycle);
+                    cycleHeight = GetHeightFromHeightMap(cyclePos);
                     if (cycleHeight < drop.height && cycleHeight < lowestHeight)
                     {
-                        lowestPos = posCycle;
+                        lowestPos = cyclePos;
                         lowestHeight = cycleHeight;
                     }
                 }
 
                 // Droplet is at the lowest position of the surrounding spots
-                if (GetHeightFromHeightMap(drop.position) <= GetHeightFromHeightMap(lowestPos))
+                if (drop.height <= lowestHeight)
                 {
+                    // Disbtribute the sediment to the surrounding points aswell
                     AddHeightOnHeightMap(drop.position, drop.sediment);
                     break;
                 }
 
                 // Update the droplets position to the lowest adjacent point
                 drop.position = lowestPos;
-                // Update the droplets height (I could get this when finding the lowest adjacent point)
-                drop.height = GetHeightFromHeightMap(drop.position);
+                // Update the droplets height
+                drop.height = lowestHeight;
                 // Find the delta height
-                float deltaHeight = drop.prevHeight - drop.height;
+                deltaHeight = drop.prevHeight - drop.height;
                 // This is all a mess
                 // Find the delta speed (possibly wrong)
-                float deltaSpeed = deltaHeight * drop.speed;
-                // Update the speed
-                drop.speed += deltaSpeed; // FIX THIS
-                // Calculate the new sediment capacity based on remaining water and droplet speed
-                drop.sedimentCapacity = (drop.water * drop.speed < m_fMaxSedimentCapacity)
-                    ? drop.water * drop.speed : m_fMaxSedimentCapacity;
+                //deltaSpeed = -deltaHeight;
+                //// Update the speed
+                //drop.speed += deltaSpeed; // FIX THIS
+                //// Calculate the new sediment capacity based on remaining water and droplet speed
+                //drop.sedimentCapacity = (drop.water * drop.speed < m_fMaxSedimentCapacity)
+                //    ? drop.water * drop.speed : m_fMaxSedimentCapacity;
+                drop.sedimentCapacity = (drop.water < m_fMaxSedimentCapacity) ? drop.water : m_fMaxSedimentCapacity;
+
+                // TODO: Do the shit were soil is taken and deposited in an area around a point
 
                 if (drop.sediment > drop.sedimentCapacity)
                 {
                     // Deposit some soil
-                    AddHeightOnHeightMap(drop.position, drop.sediment - drop.sedimentCapacity);
+                    AddHeightOnHeightMap(drop.position, drop.sedimentCapacity - drop.sediment);
                     drop.sediment = drop.sedimentCapacity;
                 }
                 else
@@ -373,8 +394,8 @@ public class HydraulicErosion : MonoBehaviour
         }
 
         // Sets the compute shader data
-        ComputeBuffer heightBuffer = new ComputeBuffer(m_fHeightMap.Length, sizeof(float));
-        heightBuffer.SetData(m_fHeightMap);
+        ComputeBuffer heightBuffer = new ComputeBuffer(m_hmHeightMap.m_fHeightMap.Length, sizeof(float));
+        heightBuffer.SetData(m_hmHeightMap.m_fHeightMap);
         m_cpErosion.SetBuffer(0, "heightMap", heightBuffer);
         m_cpErosion.SetInt("resolution", m_sResolution);
         m_cpErosion.SetInt("maxLifetime", m_sMaxLifetime);
@@ -387,7 +408,7 @@ public class HydraulicErosion : MonoBehaviour
         m_cpErosion.Dispatch(0, m_iNumGroups, 1, 1);
 
         // Retrieve the data and release the buffer
-        heightBuffer.GetData(m_fHeightMap);
+        heightBuffer.GetData(m_hmHeightMap.m_fHeightMap);
         heightBuffer.Release();
     }
 
@@ -403,7 +424,7 @@ public class HydraulicErosion : MonoBehaviour
     /// <returns>How many droplets are going to be simulated on the gpu</returns>
     public int GetComputeShaderThreads() { return m_iNumGroups * 1024; }
 
-    public void BtnGenerateHeightmap()
+    public void BtnGenerateNewHeightmap()
     {
         RandomiseOffset();
         GenerateHeightMap();

@@ -1,7 +1,7 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody))]
+[RequireComponent(typeof(CapsuleCollider))]
 public sealed class PlayerController : MonoBehaviour
 {
     public static bool s_bInputEnabled { internal get; set; }
@@ -65,13 +65,13 @@ public sealed class PlayerController : MonoBehaviour
         private void CameraUpdate()
         {
             // Rotates the camera
-            m_pcWrapper.m_tLocalTransform.Rotate(0, Input.GetAxis("Mouse X") * m_v2Sensitivity.x, 0);
-            m_pcWrapper.m_tFirstChild.Rotate(Input.GetAxis("Mouse Y") * -m_v2Sensitivity.y, 0, 0);
+            m_pcWrapper.m_tLocalTransform.Rotate(0, Input.GetAxis("MouseX") * m_v2Sensitivity.x, 0);
+            m_pcWrapper.m_tFirstChild.Rotate(Input.GetAxis("MouseY") * -m_v2Sensitivity.y, 0, 0);
         }
-    }
+    } // PlayerLook
 
     /// <summary>
-    /// This class controls the players movement, movement requires a walkable physics layer at 8
+    /// This class controls the players movement
     /// </summary>
     [System.Serializable]
     internal sealed class PlayerMovement
@@ -130,6 +130,7 @@ public sealed class PlayerController : MonoBehaviour
         //private bool m_bSprinting = true;
 
         private float m_fJumpTimer = 0;
+        private int m_iWalkableMask = 0;
 
         private Vector2 m_v2Input = new Vector2();
         private Vector3 m_v3Force = new Vector3();
@@ -142,6 +143,7 @@ public sealed class PlayerController : MonoBehaviour
             s_bMovementEnabled = true;
 
             m_fJumpTimer = m_fJumpCooldown;
+            m_iWalkableMask = LayerMask.GetMask("WalkableStaticFlat", "WalkableStaticSloped", "WalkableDynamic");
         }
 
         /// <summary>
@@ -157,13 +159,13 @@ public sealed class PlayerController : MonoBehaviour
                     m_fJumpTimer = 0;
             }
 
-            if (s_bInputEnabled && s_bMovementEnabled && m_bAllowInput)
-            {
-                GroundCheck();
-                DoMovement();
-            }
+            GroundCheck();
+            DoMovement();
         }
 
+        /// <summary>
+        /// Looks below the player for valid ground
+        /// </summary>
         private void GroundCheck()
         {
             if (m_pcWrapper.m_bDebug)
@@ -180,13 +182,13 @@ public sealed class PlayerController : MonoBehaviour
 
             // Checks if one of four downward facing rays collide with a surface
             if (Physics.Raycast(m_pcWrapper.m_tLocalTransform.position
-                + new Vector3(0, m_fGRayOrigin, m_fGRaySpread), Vector3.down, m_fGRayLength, 1 << 8)
+                + new Vector3(0, m_fGRayOrigin, m_fGRaySpread), Vector3.down, m_fGRayLength, m_iWalkableMask)
                 || Physics.Raycast(m_pcWrapper.m_tLocalTransform.position
-                + new Vector3(0, m_fGRayOrigin, m_fGRaySpread), Vector3.down, m_fGRayLength, 1 << 8)
+                + new Vector3(0, m_fGRayOrigin, m_fGRaySpread), Vector3.down, m_fGRayLength, m_iWalkableMask)
                 || Physics.Raycast(m_pcWrapper.m_tLocalTransform.position
-                + new Vector3(0, m_fGRayOrigin, m_fGRaySpread), Vector3.down, m_fGRayLength, 1 << 8)
+                + new Vector3(0, m_fGRayOrigin, m_fGRaySpread), Vector3.down, m_fGRayLength, m_iWalkableMask)
                 || Physics.Raycast(m_pcWrapper.m_tLocalTransform.position
-                + new Vector3(0, m_fGRayOrigin, m_fGRaySpread), Vector3.down, m_fGRayLength, 1 << 8))
+                + new Vector3(0, m_fGRayOrigin, m_fGRaySpread), Vector3.down, m_fGRayLength, m_iWalkableMask))
             {
                 m_bGrounded = true;
             }
@@ -197,6 +199,9 @@ public sealed class PlayerController : MonoBehaviour
             }
         }
 
+        /// <summary>
+        /// All player movement is done here
+        /// </summary>
         private void DoMovement()
         {
             //if (m_bGrounded && Input.GetKey(m_kcSprint) && Input.GetKey(m_kcForward))
@@ -207,12 +212,20 @@ public sealed class PlayerController : MonoBehaviour
             // Resets the force data
             m_v3Force -= m_v3Force;
 
-            // Caches the input to reduces calls
-            m_v2Input = new Vector2(Input.GetAxis("Vertical"), Input.GetAxis("Horizontal"));
+            // Move this if statement inside the movement
+            if (s_bInputEnabled && s_bMovementEnabled && m_bAllowInput)
+            {
+                // Caches the input to reduces calls
+                m_v2Input = new Vector2(Input.GetAxis("Vertical"), Input.GetAxis("Horizontal"));
 
-            // Converts the unit square to a unit circle as to maintain constant magnitude
-            m_v2Input = new Vector2(m_v2Input.x * Mathf.Sqrt(1 - 0.5f * m_v2Input.y * m_v2Input.y),
-                m_v2Input.y * Mathf.Sqrt(1 - 0.5f * m_v2Input.x * m_v2Input.x));
+                // Converts the unit square to a unit circle as to maintain constant magnitude
+                m_v2Input = new Vector2(m_v2Input.x * Mathf.Sqrt(1 - 0.5f * m_v2Input.y * m_v2Input.y),
+                    m_v2Input.y * Mathf.Sqrt(1 - 0.5f * m_v2Input.x * m_v2Input.x));
+            }
+            else
+            {
+                m_v2Input = new Vector2();
+            }
 
             if (m_bGrounded)
             {
@@ -274,7 +287,7 @@ public sealed class PlayerController : MonoBehaviour
             }
             else
             {
-                m_v2Input *= m_fAerialManuverability;
+                m_v2Input *= m_fAerialManuverability * Time.deltaTime * 100;
 
                 // Rotates the force to match the player
                 m_v3Force += m_pcWrapper.m_tLocalTransform.forward * m_v2Input.x;
@@ -296,8 +309,8 @@ public sealed class PlayerController : MonoBehaviour
 
             m_pcWrapper.m_rbRigidbody.AddForce(m_v3Force * m_pcWrapper.m_rbRigidbody.mass);
         }
-    }
-    
+    } // PlayerMovement
+
     // ----------Visible variables----------
     [SerializeField]
     private bool m_bDebug = false;
@@ -346,4 +359,4 @@ public sealed class PlayerController : MonoBehaviour
         m_plLook.Update();
         m_pmMovement.Update();
     }
-}
+} // PlayerController
