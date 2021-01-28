@@ -269,8 +269,7 @@ public class HydraulicErosion : MonoBehaviour
 
         // To save memory allocations allocate the droplet outside the for loop
         Droplet drop;
-        float deltaHeight = 0;
-        float deltaSpeed = 0;
+        //float deltaSpeed = 0;
 
         // Loop through each and every droplet (slow)
         for (int i = 0; i < m_iNumDroplets; i++)
@@ -295,38 +294,21 @@ public class HydraulicErosion : MonoBehaviour
                 float lowestHeight = int.MaxValue;
                 Vector2Int cyclePos;
                 float cycleHeight;
+
                 for (int g = 0; g < 8; g++)
                 {
                     // Rotates counter-clockwise
-                    switch (g)
+                    cyclePos = g switch
                     {
-                        case 0:
-                            cyclePos = new Vector2Int(drop.position.x - 1, drop.position.y - 1);
-                            break;
-                        case 1:
-                            cyclePos = new Vector2Int(drop.position.x, drop.position.y - 1);
-                            break;
-                        case 2:
-                            cyclePos = new Vector2Int(drop.position.x + 1, drop.position.y - 1);
-                            break;
-                        case 3:
-                            cyclePos = new Vector2Int(drop.position.x + 1, drop.position.y);
-                            break;
-                        case 4:
-                            cyclePos = new Vector2Int(drop.position.x + 1, drop.position.y + 1);
-                            break;
-                        case 5:
-                            cyclePos = new Vector2Int(drop.position.x, drop.position.y + 1);
-                            break;
-                        case 6:
-                            cyclePos = new Vector2Int(drop.position.x - 1, drop.position.y + 1);
-                            break;
-                        case 7:
-                        default:
-                            cyclePos = new Vector2Int(drop.position.x - 1, drop.position.y);
-                            break;
-                    }
-
+                        0 => new Vector2Int(drop.position.x - 1, drop.position.y - 1),
+                        1 => new Vector2Int(drop.position.x, drop.position.y - 1),
+                        2 => new Vector2Int(drop.position.x + 1, drop.position.y - 1),
+                        3 => new Vector2Int(drop.position.x + 1, drop.position.y),
+                        4 => new Vector2Int(drop.position.x + 1, drop.position.y + 1),
+                        5 => new Vector2Int(drop.position.x, drop.position.y + 1),
+                        6 => new Vector2Int(drop.position.x - 1, drop.position.y + 1),
+                        _ => new Vector2Int(drop.position.x - 1, drop.position.y),
+                    };
                     cycleHeight = GetHeightFromHeightMap(cyclePos);
                     if (cycleHeight < drop.height && cycleHeight < lowestHeight)
                     {
@@ -348,7 +330,8 @@ public class HydraulicErosion : MonoBehaviour
                 // Update the droplets height
                 drop.height = lowestHeight;
                 // Find the delta height
-                deltaHeight = drop.prevHeight - drop.height;
+                float deltaHeight = drop.prevHeight - drop.height;
+
                 // This is all a mess
                 // Find the delta speed (possibly wrong)
                 //deltaSpeed = -deltaHeight;
@@ -359,7 +342,7 @@ public class HydraulicErosion : MonoBehaviour
                 //    ? drop.water * drop.speed : m_fMaxSedimentCapacity;
                 drop.sedimentCapacity = (drop.water < m_fMaxSedimentCapacity) ? drop.water : m_fMaxSedimentCapacity;
 
-                // TODO: Do the shit were soil is taken and deposited in an area around a point
+                // TODO: Do the shit where soil is taken and deposited in an area around a point
 
                 if (drop.sediment > drop.sedimentCapacity)
                 {
