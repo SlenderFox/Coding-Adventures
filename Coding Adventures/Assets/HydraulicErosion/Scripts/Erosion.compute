@@ -5,10 +5,9 @@ RWStructuredBuffer<float> heightMap;
 uint resolution;
 uint maxLifetime;
 float erosionSpeed;
-float maxSedimentCapacity;
-float water;
 float evaporationRate;
-
+float water;
+/*
 float GetHeightFromHeightMap(uint2 pPos)
 {
 	if (pPos.x < 0 || pPos.x >= resolution || pPos.y < 0 || pPos.y >= resolution)
@@ -147,13 +146,13 @@ void DoDropletSimulation(uint id)
 		water -= min(evaporationRate, water);
 	}
 }
-
+*/
 [numthreads(1024,1,1)]
 void SimulateDroplet(uint3 id : SV_DispatchThreadID)
 {
 	//DoDropletSimulation(id.x);
 
-	uint2 testPosition = { id.x % resolution, id.x / resolution };
-	heightMap[testPosition.x + testPosition.y * resolution] = 0;
+	//uint2 testPosition = { id.x % resolution, id.x / resolution };
+	//heightMap[testPosition.x + testPosition.y * resolution] = 0;
 	//heightMap[id.x] = 0;
 }

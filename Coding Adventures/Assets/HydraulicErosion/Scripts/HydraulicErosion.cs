@@ -25,8 +25,6 @@ public class HydraulicErosion : MonoBehaviour
     private short m_sMaxLifetime = 90;
     [SerializeField, Range(0.00001f, 0.5f), Tooltip("How fast each droplet collects sediment from the ground")]
     private float m_fErosionSpeed = 0.01f;
-    [SerializeField, Min(0), Tooltip("The limit to how much sediment a single droplet can hold")]
-    private float m_fMaxSedimentCapacity = 3;
     [SerializeField, Min(0.01f), Tooltip("How much water the droplets will start with," +
         " more = more sediment carried")]
     private float m_fStartWater = 2;
@@ -65,24 +63,24 @@ public class HydraulicErosion : MonoBehaviour
     /// </summary>
     internal struct Droplet
     {
-        internal Droplet(Vector2Int pPosition, float pWater, float pSedimentCapacity)
+        internal Droplet(Vector2Int pPosition, float pHeight, float pWater)
         {
             position = pPosition;
+            height = pHeight;
             water = pWater;
-            height = 0;
             prevHeight = float.PositiveInfinity;
             sediment = 0;
-            sedimentCapacity = pSedimentCapacity;
-            speed = 0;
+            inertia = 0;    // Inertia is just the delta height
         }
 
         internal Vector2Int position;
-        internal float water;
         internal float height;
+        internal float water;
         internal float prevHeight;
         internal float sediment;
-        internal float sedimentCapacity;
-        internal float speed;
+        internal float inertia;
+
+        // Sediment capacity is how much water is left
     }
 
     /// <summary>
@@ -108,7 +106,6 @@ public class HydraulicErosion : MonoBehaviour
         if (m_bLiveUpdate)
         {
             UpdateNoiseLayers();
-            GenerateHeightMap();
             GenerateMesh();
         }
     }
@@ -168,36 +165,6 @@ public class HydraulicErosion : MonoBehaviour
             }
         }
     }
-    
-    /// <summary>
-    /// Samples the height from a position in the height map,
-    /// values outside the range will return NaN
-    /// </summary>
-    /// <param name="pPos">The position on the heightmap in 2d space</param>
-    /// <returns>The height at the point</returns>
-    private float GetHeightFromHeightMap(Vector2Int pPos)
-    {
-        if (pPos.x < 0 || pPos.x >= m_sResolution || pPos.y < 0 || pPos.y >= m_sResolution)
-            return 0;
-
-        return m_hmHeightMap.m_v2Coords[pPos.x, pPos.y];
-    }
-
-    /// <summary>
-    /// Does an addition operation to a position in the height map array,
-    /// negative numbers can be used to subtract
-    /// </summary>
-    /// <param name="pPos">The position on the heightmap in 2d space</param>
-    /// <param name="pValue">The value to be added (or subtracted)</param>
-    private void AddHeightOnHeightMap(Vector2Int pPos, float pValue)
-    {
-        if (pPos.x < 0 || pPos.x >= m_sResolution || pPos.y < 0 || pPos.y >= m_sResolution)
-            return;
-
-        m_hmHeightMap.m_v2Coords[pPos.x, pPos.y] += pValue;
-        if (m_hmHeightMap.m_v2Coords[pPos.x, pPos.y] < 0)
-            m_hmHeightMap.m_v2Coords[pPos.x, pPos.y] = 0;
-    }
 
     /// <summary>
     /// Generates the 3d mesh based on the height map array
@@ -255,6 +222,59 @@ public class HydraulicErosion : MonoBehaviour
     }
 
     /// <summary>
+    /// Samples the height from a position in the height map,
+    /// values outside the range will return NaN
+    /// </summary>
+    /// <param name="pPos">The position on the heightmap in 2d space</param>
+    /// <returns>The height at the point</returns>
+    private float GetHeightFromHeightMap(Vector2Int pPos)
+    {
+        if (pPos.x < 0 || pPos.x >= m_sResolution || pPos.y < 0 || pPos.y >= m_sResolution)
+            return float.PositiveInfinity;
+
+        return m_hmHeightMap.m_v2Coords[pPos.x, pPos.y];
+    }
+
+    /// <summary>
+    /// Does an addition operation to a position in the height map array,
+    /// negative numbers can be used to subtract
+    /// </summary>
+    /// <param name="pPos">The position on the heightmap in 2d space</param>
+    /// <param name="pValue">The value to be added (or subtracted)</param>
+    private void AddHeightOnHeightMap(ref Droplet pDroplet, float pAmount)
+    {
+        if (pDroplet.position.x < 0 || pDroplet.position.x >= m_sResolution || 
+            pDroplet.position.y < 0 || pDroplet.position.y >= m_sResolution)
+            throw new UnityException("Droplet has gone out of bounds");
+
+        if (pAmount >= 0)
+        {
+            // Adding sediment to the terrain
+            m_hmHeightMap.m_v2Coords[pDroplet.position.x, pDroplet.position.y] += pAmount;
+            pDroplet.sediment -= pAmount;
+        }
+        else
+        {
+            // Removing sediment from the terrain
+            //Invert amount if subtraction to make code easier to understand
+            pAmount = -pAmount;
+            float terrainHeight = GetHeightFromHeightMap(pDroplet.position);
+            float difference = terrainHeight - pAmount;
+            // Prevent from removing too much sediment, creates "bedrock"
+            if (difference < 0)
+            {
+                m_hmHeightMap.m_v2Coords[pDroplet.position.x, pDroplet.position.y] -= terrainHeight;
+                pDroplet.sediment += terrainHeight;
+            }
+            else
+            {
+                m_hmHeightMap.m_v2Coords[pDroplet.position.x, pDroplet.position.y] -= pAmount;
+                pDroplet.sediment += pAmount;
+            }
+        }
+    }
+
+    /// <summary>
     /// Simulates water erosion, this function does it on the cpu
     /// </summary>
     private void RunErosion()
@@ -267,29 +287,25 @@ public class HydraulicErosion : MonoBehaviour
             GenerateMesh();
         }
 
-        // To save memory allocations allocate the droplet outside the for loop
         Droplet drop;
-        //float deltaSpeed = 0;
 
         // Loop through each and every droplet (slow)
         for (int i = 0; i < m_iNumDroplets; i++)
         {
-            // Initialise the droplet
-            drop = new Droplet(new Vector2Int(Random.Range(0, m_sResolution), Random.Range(0, m_sResolution)),
-                m_fStartWater, m_fMaxSedimentCapacity);
-            drop.height = GetHeightFromHeightMap(drop.position);
-            //float sedimentTaken = m_fErosionSpeed;
-            //drop.sediment += sedimentTaken;
-            //AddHeightOnHeightMap(drop.position, -sedimentTaken);
+            // Initialise a new droplet
+            {
+                Vector2Int startPosition = new Vector2Int(Random.Range(0, m_sResolution), Random.Range(0, m_sResolution));
+                drop = new Droplet(startPosition, m_fStartWater, GetHeightFromHeightMap(startPosition));
+            }
 
             // Each loop is a step in the droplets life (slow)
+            // A break in this loop is equivelant to the droplet dying
             for (int j = 0; j < m_sMaxLifetime; j++)
             {
                 // Update the previous height
                 drop.prevHeight = drop.height;
 
                 // Calculate the lowest adjacent point and update the droplet position to it
-                // There might be a better way to do this
                 Vector2Int lowestPos = new Vector2Int(int.MaxValue, int.MaxValue);
                 float lowestHeight = int.MaxValue;
                 Vector2Int cyclePos;
@@ -301,13 +317,13 @@ public class HydraulicErosion : MonoBehaviour
                     cyclePos = g switch
                     {
                         0 => new Vector2Int(drop.position.x - 1, drop.position.y - 1),
-                        1 => new Vector2Int(drop.position.x, drop.position.y - 1),
+                        1 => new Vector2Int(drop.position.x,     drop.position.y - 1),
                         2 => new Vector2Int(drop.position.x + 1, drop.position.y - 1),
-                        3 => new Vector2Int(drop.position.x + 1, drop.position.y),
+                        3 => new Vector2Int(drop.position.x + 1, drop.position.y    ),
                         4 => new Vector2Int(drop.position.x + 1, drop.position.y + 1),
-                        5 => new Vector2Int(drop.position.x, drop.position.y + 1),
+                        5 => new Vector2Int(drop.position.x,     drop.position.y + 1),
                         6 => new Vector2Int(drop.position.x - 1, drop.position.y + 1),
-                        _ => new Vector2Int(drop.position.x - 1, drop.position.y),
+                        _ => new Vector2Int(drop.position.x - 1, drop.position.y    ),
                     };
                     cycleHeight = GetHeightFromHeightMap(cyclePos);
                     if (cycleHeight < drop.height && cycleHeight < lowestHeight)
@@ -321,7 +337,7 @@ public class HydraulicErosion : MonoBehaviour
                 if (drop.height <= lowestHeight)
                 {
                     // Disbtribute the sediment to the surrounding points aswell
-                    AddHeightOnHeightMap(drop.position, drop.sediment);
+                    AddHeightOnHeightMap(ref drop, drop.sediment);
                     break;
                 }
 
@@ -329,8 +345,8 @@ public class HydraulicErosion : MonoBehaviour
                 drop.position = lowestPos;
                 // Update the droplets height
                 drop.height = lowestHeight;
-                // Find the delta height
-                float deltaHeight = drop.prevHeight - drop.height;
+                // inertia is the delta height
+                drop.inertia = drop.prevHeight - drop.height;
 
                 // This is all a mess
                 // Find the delta speed (possibly wrong)
@@ -340,25 +356,25 @@ public class HydraulicErosion : MonoBehaviour
                 //// Calculate the new sediment capacity based on remaining water and droplet speed
                 //drop.sedimentCapacity = (drop.water * drop.speed < m_fMaxSedimentCapacity)
                 //    ? drop.water * drop.speed : m_fMaxSedimentCapacity;
-                drop.sedimentCapacity = (drop.water < m_fMaxSedimentCapacity) ? drop.water : m_fMaxSedimentCapacity;
 
-                // TODO: Do the shit where soil is taken and deposited in an area around a point
-
-                if (drop.sediment > drop.sedimentCapacity)
-                {
-                    // Deposit some soil
-                    AddHeightOnHeightMap(drop.position, drop.sedimentCapacity - drop.sediment);
-                    drop.sediment = drop.sedimentCapacity;
-                }
-                else
-                {
-                    // Erode some soil
-                    float sedimentTaken = Mathf.Min(m_fErosionSpeed, deltaHeight);
-                    drop.sediment += sedimentTaken;
-                    AddHeightOnHeightMap(drop.position, -sedimentTaken);
-                }
                 // Evaporate some water
                 drop.water -= Mathf.Min(m_fEvaporationRate, drop.water);
+
+                // TODO: Do the shit where soil is taken and deposited in an area around a point
+                if (drop.sediment != drop.water)
+                {
+                    if (drop.sediment > drop.water)
+                    {
+                        // Deposit some soil
+                        AddHeightOnHeightMap(ref drop, drop.water - drop.sediment);
+                    }
+                    else
+                    {
+                        // Erode some soil
+                        float sedimentTaken = Mathf.Min(m_fErosionSpeed, drop.inertia);
+                        AddHeightOnHeightMap(ref drop, -sedimentTaken);
+                    }
+                }
             }
         }
     }
@@ -383,9 +399,8 @@ public class HydraulicErosion : MonoBehaviour
         m_cpErosion.SetInt("resolution", m_sResolution);
         m_cpErosion.SetInt("maxLifetime", m_sMaxLifetime);
         m_cpErosion.SetFloat("erosionSpeed", m_fErosionSpeed);
-        m_cpErosion.SetFloat("maxSedimentCapacity", m_fMaxSedimentCapacity);
-        m_cpErosion.SetFloat("water", m_fStartWater);
         m_cpErosion.SetFloat("evaporationRate", m_fEvaporationRate);
+        m_cpErosion.SetFloat("water", m_fStartWater);
 
         // Dispach the compute shader
         m_cpErosion.Dispatch(0, m_iNumGroups, 1, 1);
