@@ -11,19 +11,17 @@ public class MarchingCubes : MonoBehaviour
         public Vector3 vertexB;
         public Vector3 vertexC;
 
+        // Allows Triangle to be access via index
         public Vector3 this [int i]
         {
             get
             {
-                switch (i)
+                return i switch
                 {
-                    case 0:
-                        return vertexA;
-                    case 1:
-                        return vertexB;
-                    default:
-                        return vertexC;
-                }
+                    0 => vertexA,
+                    1 => vertexB,
+                    _ => vertexC,
+                };
             }
         }
     }
@@ -33,23 +31,27 @@ public class MarchingCubes : MonoBehaviour
     // Script references
     private MarchTable m_mtMarchTable;
 
-    /// <summary>
-    /// Called when the script is created
-    /// </summary>
     private void Awake()
     {
-        // Gets reference to the appropriate scripts
-
         // Creates a march table object
         m_mtMarchTable = new MarchTable();
         m_lTriangles = new List<Triangle>();
     }
 
+    /// <summary>
+    /// Interpolates the position of the surface between two points
+    /// </summary>
+    /// <param name="pV1">First point</param>
+    /// <param name="pV2">Second point</param>
+    /// <param name="pSurface">The value of the surface</param>
+    /// <returns>The estimated position of the surface between the two points</returns>
     Vector3 InterpolateVerts(Vector4 pV1, Vector4 pV2, float pSurface)
     {
         float t = (pSurface - pV1.w) / (pV2.w - pV1.w);
         //return v1.xyz + t * (v2.xyz - v1.xyz);
-        return new Vector3(pV1.x + t * (pV2.x - pV1.x), pV1.y + t * (pV2.y - pV1.y), pV1.z + t * (pV2.z - pV1.z));
+        // Essentially just a lerp between the two points as vector3
+        //return new Vector3(pV1.x + t * (pV2.x - pV1.x), pV1.y + t * (pV2.y - pV1.y), pV1.z + t * (pV2.z - pV1.z));
+        return Vector3.Lerp(pV1, pV2, t);
     }
 
     public void MarchWithoutInterpolation(Vector3Int pOffset, MarchingMaster pMarchingMaster)
@@ -82,10 +84,10 @@ public class MarchingCubes : MonoBehaviour
                     if (wireCube[1, 3] < pMarchingMaster.m_fSurface) cubeIndex |= 2;        // Point 1 is below the isosurface
                     if (wireCube[2, 3] < pMarchingMaster.m_fSurface) cubeIndex |= 4;        // Point 2 is below the isosurface
                     if (wireCube[3, 3] < pMarchingMaster.m_fSurface) cubeIndex |= 8;        // Point 3 is below the isosurface
-                    if (wireCube[4, 3] < pMarchingMaster.m_fSurface) cubeIndex |= 16;      // Point 4 is below the isosurface
-                    if (wireCube[5, 3] < pMarchingMaster.m_fSurface) cubeIndex |= 32;      // Point 5 is below the isosurface
-                    if (wireCube[6, 3] < pMarchingMaster.m_fSurface) cubeIndex |= 64;      // Point 6 is below the isosurface
-                    if (wireCube[7, 3] < pMarchingMaster.m_fSurface) cubeIndex |= 128;    // Point 7 is below the isosurface
+                    if (wireCube[4, 3] < pMarchingMaster.m_fSurface) cubeIndex |= 16;       // Point 4 is below the isosurface
+                    if (wireCube[5, 3] < pMarchingMaster.m_fSurface) cubeIndex |= 32;       // Point 5 is below the isosurface
+                    if (wireCube[6, 3] < pMarchingMaster.m_fSurface) cubeIndex |= 64;       // Point 6 is below the isosurface
+                    if (wireCube[7, 3] < pMarchingMaster.m_fSurface) cubeIndex |= 128;      // Point 7 is below the isosurface
 
                     // Create triangles for current cube configuration without interpolation
                     for (int i = 0; m_mtMarchTable.triTable[cubeIndex, i] != -1; i += 3)
@@ -98,63 +100,60 @@ public class MarchingCubes : MonoBehaviour
                         int c = m_mtMarchTable.triTable[cubeIndex, i + 2];
 
                         // Converts the edge numbers to positions then pushes to triangle
-                        Vector3 aOffSet;
-                        Vector3 bOffSet;
-                        Vector3 cOffSet;
 
                         // Brute forcing a
-                        switch (a)
+                        Vector3 aOffSet = a switch
                         {
-                            case 0: aOffSet = new Vector3(0.5f, 0, 0); break;
-                            case 1: aOffSet = new Vector3(1, 0, 0.5f); break;
-                            case 2: aOffSet = new Vector3(0.5f, 0, 1); break;
-                            case 3: aOffSet = new Vector3(0, 0, 0.5f); break;
-                            case 4: aOffSet = new Vector3(0.5f, 1, 0); break;
-                            case 5: aOffSet = new Vector3(1, 1, 0.5f); break;
-                            case 6: aOffSet = new Vector3(0.5f, 1, 1); break;
-                            case 7: aOffSet = new Vector3(0, 1, 0.5f); break;
-                            case 8: aOffSet = new Vector3(0, 0.5f, 0); break;
-                            case 9: aOffSet = new Vector3(1, 0.5f, 0); break;
-                            case 10: aOffSet = new Vector3(1, 0.5f, 1); break;
-                            case 11: aOffSet = new Vector3(0, 0.5f, 1); break;
-                            default: aOffSet = new Vector3(0, 0, 0); break;
-                        }
+                            0 => new Vector3(0.5f, 0, 0),
+                            1 => new Vector3(1, 0, 0.5f),
+                            2 => new Vector3(0.5f, 0, 1),
+                            3 => new Vector3(0, 0, 0.5f),
+                            4 => new Vector3(0.5f, 1, 0),
+                            5 => new Vector3(1, 1, 0.5f),
+                            6 => new Vector3(0.5f, 1, 1),
+                            7 => new Vector3(0, 1, 0.5f),
+                            8 => new Vector3(0, 0.5f, 0),
+                            9 => new Vector3(1, 0.5f, 0),
+                            10 => new Vector3(1, 0.5f, 1),
+                            11 => new Vector3(0, 0.5f, 1),
+                            _ => new Vector3(0, 0, 0),
+                        };
 
                         // Brute forcing b
-                        switch (b)
+                        Vector3 bOffSet = b switch
                         {
-                            case 0: bOffSet = new Vector3(0.5f, 0, 0); break;
-                            case 1: bOffSet = new Vector3(1, 0, 0.5f); break;
-                            case 2: bOffSet = new Vector3(0.5f, 0, 1); break;
-                            case 3: bOffSet = new Vector3(0, 0, 0.5f); break;
-                            case 4: bOffSet = new Vector3(0.5f, 1, 0); break;
-                            case 5: bOffSet = new Vector3(1, 1, 0.5f); break;
-                            case 6: bOffSet = new Vector3(0.5f, 1, 1); break;
-                            case 7: bOffSet = new Vector3(0, 1, 0.5f); break;
-                            case 8: bOffSet = new Vector3(0, 0.5f, 0); break;
-                            case 9: bOffSet = new Vector3(1, 0.5f, 0); break;
-                            case 10: bOffSet = new Vector3(1, 0.5f, 1); break;
-                            case 11: bOffSet = new Vector3(0, 0.5f, 1); break;
-                            default: bOffSet = new Vector3(0, 0, 0); break;
-                        }
+                            0 => new Vector3(0.5f, 0, 0),
+                            1 => new Vector3(1, 0, 0.5f),
+                            2 => new Vector3(0.5f, 0, 1),
+                            3 => new Vector3(0, 0, 0.5f),
+                            4 => new Vector3(0.5f, 1, 0),
+                            5 => new Vector3(1, 1, 0.5f),
+                            6 => new Vector3(0.5f, 1, 1),
+                            7 => new Vector3(0, 1, 0.5f),
+                            8 => new Vector3(0, 0.5f, 0),
+                            9 => new Vector3(1, 0.5f, 0),
+                            10 => new Vector3(1, 0.5f, 1),
+                            11 => new Vector3(0, 0.5f, 1),
+                            _ => new Vector3(0, 0, 0),
+                        };
 
                         // Brute forcing c
-                        switch (c)
+                        Vector3 cOffSet = c switch
                         {
-                            case 0: cOffSet = new Vector3(0.5f, 0, 0); break;
-                            case 1: cOffSet = new Vector3(1, 0, 0.5f); break;
-                            case 2: cOffSet = new Vector3(0.5f, 0, 1); break;
-                            case 3: cOffSet = new Vector3(0, 0, 0.5f); break;
-                            case 4: cOffSet = new Vector3(0.5f, 1, 0); break;
-                            case 5: cOffSet = new Vector3(1, 1, 0.5f); break;
-                            case 6: cOffSet = new Vector3(0.5f, 1, 1); break;
-                            case 7: cOffSet = new Vector3(0, 1, 0.5f); break;
-                            case 8: cOffSet = new Vector3(0, 0.5f, 0); break;
-                            case 9: cOffSet = new Vector3(1, 0.5f, 0); break;
-                            case 10: cOffSet = new Vector3(1, 0.5f, 1); break;
-                            case 11: cOffSet = new Vector3(0, 0.5f, 1); break;
-                            default: cOffSet = new Vector3(0, 0, 0); break;
-                        }
+                            0 => new Vector3(0.5f, 0, 0),
+                            1 => new Vector3(1, 0, 0.5f),
+                            2 => new Vector3(0.5f, 0, 1),
+                            3 => new Vector3(0, 0, 0.5f),
+                            4 => new Vector3(0.5f, 1, 0),
+                            5 => new Vector3(1, 1, 0.5f),
+                            6 => new Vector3(0.5f, 1, 1),
+                            7 => new Vector3(0, 1, 0.5f),
+                            8 => new Vector3(0, 0.5f, 0),
+                            9 => new Vector3(1, 0.5f, 0),
+                            10 => new Vector3(1, 0.5f, 1),
+                            11 => new Vector3(0, 0.5f, 1),
+                            _ => new Vector3(0, 0, 0),
+                        };
 
                         tri.vertexA = new Vector3(wireCube[0, 0], wireCube[0, 1], wireCube[0, 2]) + aOffSet;
                         tri.vertexB = new Vector3(wireCube[0, 0], wireCube[0, 1], wireCube[0, 2]) + bOffSet;

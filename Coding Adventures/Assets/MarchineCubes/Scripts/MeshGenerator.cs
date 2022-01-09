@@ -14,9 +14,6 @@ public class MeshGenerator : MonoBehaviour
     private MeshFilter m_mfMeshFilter;
     private Mesh m_mMesh;
 
-    /// <summary>
-    /// Called when the script is created
-    /// </summary>
     private void Awake()
     {
         // Gets reference to the appropriate scripts
@@ -28,9 +25,10 @@ public class MeshGenerator : MonoBehaviour
     }
 
     /// <summary>
-    /// Using a list of verts and triangles, create a mesh
+    /// Create a mesh using a given list of triangles
     /// </summary>
-    /// <param name="pMarchingCubes"></param>
+    /// <param name="pTriangles">The list of triangles</param>
+    /// <param name="pCount">How many triangles there are</param>
     public void CreateMesh(Vector3[,] pTriangles, int pCount)
     {
         // Clears the mesh, ready for a new one
@@ -54,5 +52,6 @@ public class MeshGenerator : MonoBehaviour
         m_mMesh.triangles = m_iTriangles;
 
         m_mMesh.RecalculateNormals();
+        m_mMesh.Optimize();
     }
 }

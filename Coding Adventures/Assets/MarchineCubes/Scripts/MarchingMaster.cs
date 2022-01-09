@@ -3,35 +3,31 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(DensityCalculation))]
+[RequireComponent(typeof(MarchingCubes))]
 public class MarchingMaster : MonoBehaviour
 {
     // --------------------Public--------------------
-    // Whether or not spheres are placed in the volume
-    [SerializeField]
+    [SerializeField, Tooltip("Whether or not spheres are placed in the volume")]
     private bool m_bSpheres = false;
-
     [SerializeField]
     private bool m_bInterpolate = false;
-
     [SerializeField]
     private bool m_bRandomizeNoiseOffset = true;
 
-    // The minimum value required for a point to be visible
+    [Tooltip("At what value will point be considered above the surface and thus cause geometry to be placed")]
     public float m_fSurface = 0.5f;
+    [Tooltip("The size of the random noise, lower values result in bigger shapes")]
+    public float m_fNoiseScale = 0.05f;
+    //public float m_fDetail = 1;
 
-    public float m_fNoiseScale = 0.1f;
-
-    public float m_fDetail = 1;
-
-    // The desired scale of the volume generated
+    [Tooltip("The desired scale of the volume generated")]
     public Vector3Int m_v3iBounds = new Vector3Int(1, 1, 1);
 
     [Space]
     [SerializeField]
     private GameObject m_goMeshObjPrefab = null;
-
-    [SerializeField]
-    private Material m_mMaterial = null;
+    //[SerializeField]
+    //private Material m_mMaterial = null;
 
     // --------------------Private--------------------
 
@@ -55,9 +51,6 @@ public class MarchingMaster : MonoBehaviour
     private MarchingCubes m_mcMarchingCubes;
     //private MeshGenerator m_mgMeshGenerator;
 
-    /// <summary>
-    /// Called when the script is created
-    /// </summary>
     private void Awake()
     {
         // Gets reference to the appropriate scripts
@@ -68,17 +61,12 @@ public class MarchingMaster : MonoBehaviour
         m_fVolumeData = new float[m_v3iBounds.x, m_v3iBounds.y, m_v3iBounds.z];
     }
 
-    /// <summary>
-    /// Called at the beginning of the first frame
-    /// </summary>
     private void Start()
     {
+        // Generate a mesh when the program starts
         GenerateNewMesh();
     }
 
-    /// <summary>
-    /// Called once per frame
-    /// </summary>
     private void Update()
     {
         // Regenerates the density field on R press
@@ -110,7 +98,7 @@ public class MarchingMaster : MonoBehaviour
         for (int i = 0; i < m_iNumChunks; i++)
         {
             GameObject newChunk = Instantiate(m_goMeshObjPrefab, gameObject.transform);
-            newChunk.GetComponent<MeshRenderer>().sharedMaterial = m_mMaterial;
+            //newChunk.GetComponent<MeshRenderer>().sharedMaterial = m_mMaterial;
             m_LgoMeshObjects.Add(newChunk);
         }
 

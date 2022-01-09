@@ -24,6 +24,7 @@ public class DensityCalculation : MonoBehaviour
     /// <summary>
     /// Iterates through each point in the bounds to find the density
     /// </summary>
+    /// <param name="pMaster">Reference to the master script</param>
     public void GenerateDensity(MarchingMaster pMaster)
     {
         // Iterates through every position in a set area to generate a density
@@ -43,7 +44,7 @@ public class DensityCalculation : MonoBehaviour
     }
 
     /// <summary>
-    /// Calculates the density for a point in 3D space 
+    /// Uses 2D Perlin Noise to calculate the density for a point in 3D space 
     /// </summary>
     /// <param name="pX">Position in the x axis</param>
     /// <param name="pY">Position in the y axis</param>
@@ -64,6 +65,9 @@ public class DensityCalculation : MonoBehaviour
     /// <summary>
     /// Places spheres at every position in a given volume
     /// </summary>
+    /// <param name="pVolume"></param>
+    /// <param name="pBounds"></param>
+    /// <param name="pSurface"></param>
     public void PlaceSpheres(float [,,]pVolume, Vector3Int pBounds, float pSurface)
     {
         // Resets the sphere list before generating a new one
