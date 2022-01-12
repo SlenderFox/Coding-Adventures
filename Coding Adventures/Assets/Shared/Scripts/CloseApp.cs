@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class CloseApp : MonoBehaviour
 {
@@ -18,9 +16,6 @@ public class CloseApp : MonoBehaviour
         #endif
     }
 
-    /// <summary>
-    /// Called once per frame
-    /// </summary>
     private void Update()
     {
         // Quit button

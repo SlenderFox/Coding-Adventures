@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class FlyCam : MonoBehaviour
 {
@@ -19,9 +17,6 @@ public class FlyCam : MonoBehaviour
     private Transform m_tLocalTransform;
     private Transform m_tChild;
 
-    /// <summary>
-    /// Called at the beginning of the first frame
-    /// </summary>
     private void Start()
     {
         m_tLocalTransform = transform;
@@ -34,25 +29,10 @@ public class FlyCam : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Called once per frame
-    /// </summary>
     private void Update()
     {
         if (!m_bEnabled)
             return;
-
-        // Quick end button
-        if (Input.GetKey(KeyCode.End))
-        {
-            #if UNITY_STANDALONE
-                Application.Quit();
-            #endif
-
-            #if UNITY_EDITOR
-                UnityEditor.EditorApplication.isPlaying = false;
-            #endif
-        }
 
         // Rotates the camera
         m_tLocalTransform.Rotate(0, Input.GetAxis("Mouse X") * m_v2Sensitivity.x, 0);

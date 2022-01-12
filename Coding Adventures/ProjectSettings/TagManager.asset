@@ -11,10 +11,10 @@ TagManager:
   - 
   - Water
   - UI
+  - WalkableStaticFlat
+  - WalkableStaticSloped
+  - WalkableStaticDynamic
   - 
-  - 
-  - Walkable
-  - Non-Walkable
   - 
   - 
   - 

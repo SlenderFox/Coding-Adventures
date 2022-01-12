@@ -4,7 +4,7 @@
 [RequireComponent(typeof(CapsuleCollider))]
 public sealed class PlayerController : MonoBehaviour
 {
-    public static bool s_bInputEnabled { internal get; set; }
+    public static bool s_bInputEnabled { internal get; set; } = true;
 
     /// <summary>
     /// This class controls the players camera looking
@@ -12,21 +12,21 @@ public sealed class PlayerController : MonoBehaviour
     [System.Serializable]
     internal sealed class PlayerLook
     {
-        public static bool s_bLookEnabled { internal get; set; }
+        public static bool s_bLookEnabled { internal get; set; } = true;
 
         [System.Serializable]
         internal struct Vec2
         {
             internal Vec2(float pX, float pY)
             {
-                x = pX;
-                y = pY;
+                m_x = pX;
+                m_y = pY;
             }
 
             [Range(0.0001f, 100f)]
-            public float x;
+            public float m_x;
             [Range(0.0001f, 100f)]
-            public float y;
+            public float m_y;
         }
 
         // ----------Visible variables----------
@@ -43,7 +43,7 @@ public sealed class PlayerController : MonoBehaviour
         /// </summary>
         internal void Start()
         {
-            s_bLookEnabled = true;
+            //s_bLookEnabled = true;
 
             // Lock the mouse in place and hide it
             Cursor.lockState = CursorLockMode.Locked;
@@ -65,8 +65,8 @@ public sealed class PlayerController : MonoBehaviour
         private void CameraUpdate()
         {
             // Rotates the camera
-            m_pcWrapper.m_tLocalTransform.Rotate(0, Input.GetAxis("MouseX") * m_v2Sensitivity.x, 0);
-            m_pcWrapper.m_tFirstChild.Rotate(Input.GetAxis("MouseY") * -m_v2Sensitivity.y, 0, 0);
+            m_pcWrapper.m_tLocalTransform.Rotate(0, Input.GetAxis("Mouse X") * m_v2Sensitivity.m_x * 0.1f, 0);
+            m_pcWrapper.m_tFirstChild.Rotate(Input.GetAxis("Mouse Y") * -m_v2Sensitivity.m_y * 0.1f, 0, 0);
         }
     } // PlayerLook
 
@@ -76,7 +76,7 @@ public sealed class PlayerController : MonoBehaviour
     [System.Serializable]
     internal sealed class PlayerMovement
     {
-        public static bool s_bMovementEnabled { internal get; set; }
+        public static bool s_bMovementEnabled { internal get; set; } = true;
 
         // ----------Visible variables----------
         //[SerializeField]
@@ -140,7 +140,7 @@ public sealed class PlayerController : MonoBehaviour
         /// </summary>
         internal void Start()
         {
-            s_bMovementEnabled = true;
+            //s_bMovementEnabled = true;
 
             m_fJumpTimer = m_fJumpCooldown;
             m_iWalkableMask = LayerMask.GetMask("WalkableStaticFlat", "WalkableStaticSloped", "WalkableDynamic");
@@ -212,7 +212,6 @@ public sealed class PlayerController : MonoBehaviour
             // Resets the force data
             m_v3Force -= m_v3Force;
 
-            // Move this if statement inside the movement
             if (s_bInputEnabled && s_bMovementEnabled && m_bAllowInput)
             {
                 // Caches the input to reduces calls
@@ -294,17 +293,20 @@ public sealed class PlayerController : MonoBehaviour
                 m_v3Force += m_pcWrapper.m_tLocalTransform.right * m_v2Input.y;
             }
 
-            // Does jumping
-            if (m_fJumpTimer <= 0 && m_bJumpEnabled && m_bGrounded
-                && Input.GetKeyDown(m_kcJump) && m_pcWrapper.m_rbRigidbody.velocity.y < m_fJumpForce)
+            if (s_bInputEnabled && s_bMovementEnabled && m_bAllowInput)
             {
-                // Resets the jump cooldown
-                m_fJumpTimer = m_fJumpCooldown;
+                // Does jumping
+                if (m_fJumpTimer <= 0 && m_bJumpEnabled && m_bGrounded
+                && Input.GetKeyDown(m_kcJump) && m_pcWrapper.m_rbRigidbody.velocity.y < m_fJumpForce)
+                {
+                    // Resets the jump cooldown
+                    m_fJumpTimer = m_fJumpCooldown;
 
-                m_pcWrapper.m_rbRigidbody.velocity = new Vector3(m_pcWrapper.m_rbRigidbody.velocity.x,
-                    m_fJumpForce, m_pcWrapper.m_rbRigidbody.velocity.z);
+                    m_pcWrapper.m_rbRigidbody.velocity = new Vector3(m_pcWrapper.m_rbRigidbody.velocity.x,
+                        m_fJumpForce, m_pcWrapper.m_rbRigidbody.velocity.z);
 
-                //m_v3Force.y = m_fJumpForce * m_pcWrapper.m_rbRigidbody.mass;
+                    //m_v3Force.y = m_fJumpForce * m_pcWrapper.m_rbRigidbody.mass;
+                }
             }
 
             m_pcWrapper.m_rbRigidbody.AddForce(m_v3Force * m_pcWrapper.m_rbRigidbody.mass);
@@ -313,7 +315,11 @@ public sealed class PlayerController : MonoBehaviour
 
     // ----------Visible variables----------
     [SerializeField]
+    private KeyCode m_kcFocus = KeyCode.K;
+    [SerializeField]
     private bool m_bDebug = false;
+    [SerializeField]
+    private bool m_bFocused = true;
     [SerializeField]
     private PlayerLook m_plLook = new PlayerLook();
     [SerializeField]
@@ -324,9 +330,6 @@ public sealed class PlayerController : MonoBehaviour
     internal Transform m_tLocalTransform;
     internal Transform m_tFirstChild;
 
-    /// <summary>
-    /// Called when the object is created
-    /// </summary>
     private void Awake()
     {
         // Local caching of the transforms to reduce cpu load
@@ -339,23 +342,26 @@ public sealed class PlayerController : MonoBehaviour
         m_plLook.m_pcWrapper = this;
         m_pmMovement.m_pcWrapper = this;
 
-        s_bInputEnabled = true;
+        //s_bInputEnabled = true;
     }
 
-    /// <summary>
-    /// Called once before the first frame
-    /// </summary>
     private void Start()
     {
         m_plLook.Start();
         m_pmMovement.Start();
     }
 
-    /// <summary>
-    /// Called once per frame
-    /// </summary>
     private void Update()
     {
+        if (Input.GetKeyDown(m_kcFocus))
+        {
+            m_bFocused = !m_bFocused;
+            s_bInputEnabled = m_bFocused;
+            // Toggles cursor visibility
+            Cursor.visible = !m_bFocused;
+            Cursor.lockState = m_bFocused ? CursorLockMode.Locked : CursorLockMode.None;
+        }
+
         m_plLook.Update();
         m_pmMovement.Update();
     }
