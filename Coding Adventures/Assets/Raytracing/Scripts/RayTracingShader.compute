@@ -137,7 +137,7 @@ float3 Shade(inout Ray pRay, RayHit pHit)
         	return saturate(dot(pHit.normal, _DirectionalLight.xyz) * -1) * _DirectionalLight.w * pHit.albedo * 0.2f;
     	}
 
-        // Return a diffuse-shaded color
+        // Return a diffuse-shaded colour
     	return saturate(dot(pHit.normal, _DirectionalLight.xyz) * -1) * _DirectionalLight.w * pHit.albedo;
     }
     else
