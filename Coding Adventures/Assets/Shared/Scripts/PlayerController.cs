@@ -38,9 +38,6 @@ public sealed class PlayerController : MonoBehaviour
         // ----------Hidden variables----------
         internal PlayerController m_pcWrapper;
 
-        /// <summary>
-        /// Called once before the first frame
-        /// </summary>
         internal void Start()
         {
             //s_bLookEnabled = true;
@@ -50,9 +47,6 @@ public sealed class PlayerController : MonoBehaviour
             Cursor.visible = false;
         }
 
-        /// <summary>
-        /// Called once per frame
-        /// </summary>
         internal void Update()
         {
             if (s_bInputEnabled && s_bLookEnabled && m_bAllowInput)
@@ -60,7 +54,7 @@ public sealed class PlayerController : MonoBehaviour
         }
 
         /// <summary>
-        /// Updates the camera movement
+        /// Updates the camera rotation based on input
         /// </summary>
         private void CameraUpdate()
         {
@@ -115,11 +109,11 @@ public sealed class PlayerController : MonoBehaviour
 
         [Header("Raycasting")]
         [SerializeField]
-        private float m_fGRayOrigin = 0.5f;
+        private float m_fGroundRayOrigin = 0.5f;
         [SerializeField]
-        private float m_fGRayLength = 0.55f;
+        private float m_fGroundRayLength = 0.55f;
         [SerializeField]
-        private float m_fGRaySpread = 0.45f;
+        private float m_fGroundRaySpread = 0.45f;
 
         // ----------Hidden variables----------
         internal PlayerController m_pcWrapper;
@@ -135,9 +129,6 @@ public sealed class PlayerController : MonoBehaviour
         private Vector2 m_v2Input = new Vector2();
         private Vector3 m_v3Force = new Vector3();
 
-        /// <summary>
-        /// Called once before the first frame
-        /// </summary>
         internal void Start()
         {
             //s_bMovementEnabled = true;
@@ -146,9 +137,6 @@ public sealed class PlayerController : MonoBehaviour
             m_iWalkableMask = LayerMask.GetMask("WalkableStaticFlat", "WalkableStaticSloped", "WalkableDynamic");
         }
 
-        /// <summary>
-        /// Called once per frame
-        /// </summary>
         internal void Update()
         {
             // Decrements the jump timer
@@ -171,24 +159,24 @@ public sealed class PlayerController : MonoBehaviour
             if (m_pcWrapper.m_bDebug)
             {
                 Debug.DrawRay(m_pcWrapper.m_tLocalTransform.position
-                    + new Vector3(0, m_fGRayOrigin, m_fGRaySpread), new Vector3(0, -m_fGRayLength, 0), Color.red);
+                    + new Vector3(0, m_fGroundRayOrigin, m_fGroundRaySpread), new Vector3(0, -m_fGroundRayLength, 0), Color.red);
                 Debug.DrawRay(m_pcWrapper.m_tLocalTransform.position
-                    + new Vector3(m_fGRaySpread, m_fGRayOrigin, 0), new Vector3(0, -m_fGRayLength, 0), Color.red);
+                    + new Vector3(m_fGroundRaySpread, m_fGroundRayOrigin, 0), new Vector3(0, -m_fGroundRayLength, 0), Color.red);
                 Debug.DrawRay(m_pcWrapper.m_tLocalTransform.position
-                    + new Vector3(0, m_fGRayOrigin, -m_fGRaySpread), new Vector3(0, -m_fGRayLength, 0), Color.red);
+                    + new Vector3(0, m_fGroundRayOrigin, -m_fGroundRaySpread), new Vector3(0, -m_fGroundRayLength, 0), Color.red);
                 Debug.DrawRay(m_pcWrapper.m_tLocalTransform.position
-                    + new Vector3(-m_fGRaySpread, m_fGRayOrigin, 0), new Vector3(0, -m_fGRayLength, 0), Color.red);
+                    + new Vector3(-m_fGroundRaySpread, m_fGroundRayOrigin, 0), new Vector3(0, -m_fGroundRayLength, 0), Color.red);
             }
 
             // Checks if one of four downward facing rays collide with a surface
             if (Physics.Raycast(m_pcWrapper.m_tLocalTransform.position
-                + new Vector3(0, m_fGRayOrigin, m_fGRaySpread), Vector3.down, m_fGRayLength, m_iWalkableMask)
+                + new Vector3(0, m_fGroundRayOrigin, m_fGroundRaySpread), Vector3.down, m_fGroundRayLength, m_iWalkableMask)
                 || Physics.Raycast(m_pcWrapper.m_tLocalTransform.position
-                + new Vector3(0, m_fGRayOrigin, m_fGRaySpread), Vector3.down, m_fGRayLength, m_iWalkableMask)
+                + new Vector3(0, m_fGroundRayOrigin, m_fGroundRaySpread), Vector3.down, m_fGroundRayLength, m_iWalkableMask)
                 || Physics.Raycast(m_pcWrapper.m_tLocalTransform.position
-                + new Vector3(0, m_fGRayOrigin, m_fGRaySpread), Vector3.down, m_fGRayLength, m_iWalkableMask)
+                + new Vector3(0, m_fGroundRayOrigin, m_fGroundRaySpread), Vector3.down, m_fGroundRayLength, m_iWalkableMask)
                 || Physics.Raycast(m_pcWrapper.m_tLocalTransform.position
-                + new Vector3(0, m_fGRayOrigin, m_fGRaySpread), Vector3.down, m_fGRayLength, m_iWalkableMask))
+                + new Vector3(0, m_fGroundRayOrigin, m_fGroundRaySpread), Vector3.down, m_fGroundRayLength, m_iWalkableMask))
             {
                 m_bGrounded = true;
             }

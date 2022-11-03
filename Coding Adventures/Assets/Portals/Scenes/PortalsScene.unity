@@ -142,7 +142,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 4294967295
   m_IsActive: 1
 --- !u!4 &403665
 Transform:
@@ -237,7 +237,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 4294967295
   m_IsActive: 1
 --- !u!4 &26681473
 Transform:
@@ -332,7 +332,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 4294967295
   m_IsActive: 1
 --- !u!4 &98211659
 Transform:
@@ -455,6 +455,38 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_kcQuitButton: 279
+--- !u!1 &407953132
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 407953133}
+  m_Layer: 0
+  m_Name: PortalPair
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &407953133
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 407953132}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children:
+  - {fileID: 1080961659}
+  - {fileID: 788783274}
+  m_Father: {fileID: 1843417825}
+  m_RootOrder: 1
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &440250643
 GameObject:
   m_ObjectHideFlags: 0
@@ -498,7 +530,7 @@ GameObject:
   - component: {fileID: 562982142}
   - component: {fileID: 562982141}
   - component: {fileID: 562982140}
-  m_Layer: 8
+  m_Layer: 7
   m_Name: RampTopRight
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -681,7 +713,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 4294967295
   m_IsActive: 1
 --- !u!4 &578375754
 Transform:
@@ -835,6 +867,7 @@ Light:
   m_UseColorTemperature: 0
   m_BoundingSphereOverride: {x: 0.03125, y: 0.109375, z: 0.03125, w: -0.03125}
   m_UseBoundingSphereOverride: 0
+  m_UseViewFrustumForShadowCasterCull: 1
   m_ShadowRadius: 0
   m_ShadowAngle: 0
 --- !u!4 &705507995
@@ -863,7 +896,7 @@ GameObject:
   - component: {fileID: 782715438}
   - component: {fileID: 782715437}
   - component: {fileID: 782715436}
-  m_Layer: 8
+  m_Layer: 6
   m_Name: TabBottomRight
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -970,7 +1003,7 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 788783273}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: -15, y: 2.21, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
@@ -980,8 +1013,8 @@ Transform:
   - {fileID: 98211659}
   - {fileID: 2078960888}
   - {fileID: 1903495775}
-  m_Father: {fileID: 1843417825}
-  m_RootOrder: 2
+  m_Father: {fileID: 407953133}
+  m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &788783275
 MonoBehaviour:
@@ -1010,7 +1043,7 @@ GameObject:
   - component: {fileID: 805426955}
   - component: {fileID: 805426954}
   - component: {fileID: 805426953}
-  m_Layer: 8
+  m_Layer: 6
   m_Name: PlatformRight
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1105,7 +1138,7 @@ GameObject:
   - component: {fileID: 967096791}
   - component: {fileID: 967096790}
   - component: {fileID: 967096789}
-  m_Layer: 8
+  m_Layer: 7
   m_Name: RampBottomRight
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1295,7 +1328,7 @@ GameObject:
   - component: {fileID: 1056724072}
   - component: {fileID: 1056724071}
   - component: {fileID: 1056724070}
-  m_Layer: 8
+  m_Layer: 6
   m_Name: PlatformLeft
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1402,7 +1435,7 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1080961658}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 15, y: 2.21, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
@@ -1412,8 +1445,8 @@ Transform:
   - {fileID: 2076783406}
   - {fileID: 1845762986}
   - {fileID: 567963928}
-  m_Father: {fileID: 1843417825}
-  m_RootOrder: 1
+  m_Father: {fileID: 407953133}
+  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1080961660
 MonoBehaviour:
@@ -1442,7 +1475,7 @@ GameObject:
   - component: {fileID: 1132857320}
   - component: {fileID: 1132857319}
   - component: {fileID: 1132857318}
-  m_Layer: 8
+  m_Layer: 6
   m_Name: TabTopRight
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1732,12 +1765,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b98f4904acbe23841a7928ee9e7a051f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  m_kcFocus: 107
   m_bDebug: 0
+  m_bFocused: 1
   m_plLook:
     m_bAllowInput: 1
     m_v2Sensitivity:
-      x: 1
-      y: 1
+      m_x: 1
+      m_y: 1
   m_pmMovement:
     m_kcJump: 32
     m_bAllowInput: 1
@@ -1748,9 +1783,9 @@ MonoBehaviour:
     m_fJumpForce: 5
     m_fAerialManuverability: 3
     m_fJumpCooldown: 0.01
-    m_fGRayOrigin: 0.5
-    m_fGRayLength: 0.55
-    m_fGRaySpread: 0.45
+    m_fGroundRayOrigin: 0.5
+    m_fGroundRayLength: 0.55
+    m_fGroundRaySpread: 0.45
     m_bGrounded: 1
 --- !u!136 &1560159214
 CapsuleCollider:
@@ -1759,7 +1794,7 @@ CapsuleCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1560159211}
-  m_Material: {fileID: 13400000, guid: 768bdf55e07e35245ae56c8e7cf2f5cb, type: 2}
+  m_Material: {fileID: 13400000, guid: 377ff82a527dc664db5aa6e309e55847, type: 2}
   m_IsTrigger: 0
   m_Enabled: 1
   m_Radius: 0.5
@@ -1877,7 +1912,7 @@ GameObject:
   - component: {fileID: 1573176119}
   - component: {fileID: 1573176118}
   - component: {fileID: 1573176117}
-  m_Layer: 8
+  m_Layer: 6
   m_Name: PitFloor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1977,7 +2012,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 4294967295
   m_IsActive: 1
 --- !u!4 &1577757604
 Transform:
@@ -2067,7 +2102,7 @@ GameObject:
   - component: {fileID: 1773424911}
   - component: {fileID: 1773424910}
   - component: {fileID: 1773424909}
-  m_Layer: 8
+  m_Layer: 7
   m_Name: RampBottomLeft
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2273,8 +2308,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 2071549498}
-  - {fileID: 1080961659}
-  - {fileID: 788783274}
+  - {fileID: 407953133}
   m_Father: {fileID: 0}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -2385,7 +2419,7 @@ GameObject:
   - component: {fileID: 1899484730}
   - component: {fileID: 1899484729}
   - component: {fileID: 1899484728}
-  m_Layer: 8
+  m_Layer: 7
   m_Name: RampTopLeft
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2485,7 +2519,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 4294967295
   m_IsActive: 1
 --- !u!4 &1902788000
 Transform:
@@ -2663,7 +2697,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 4294967295
   m_IsActive: 1
 --- !u!4 &1936900391
 Transform:
@@ -2848,7 +2882,7 @@ GameObject:
   - component: {fileID: 1941725499}
   - component: {fileID: 1941725498}
   - component: {fileID: 1941725497}
-  m_Layer: 8
+  m_Layer: 6
   m_Name: TabBottomLeft
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2959,7 +2993,7 @@ GameObject:
   - component: {fileID: 2044710017}
   - component: {fileID: 2044710016}
   - component: {fileID: 2044710015}
-  m_Layer: 8
+  m_Layer: 6
   m_Name: TabTopLeft
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3104,7 +3138,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 4294967295
   m_IsActive: 1
 --- !u!4 &2076783406
 Transform:

@@ -126,7 +126,7 @@ public class Portal : MonoBehaviour
 
                 m_pLinkedPortal.OnTravellerEnterPortal(traveller);
                 m_LptTravellers.RemoveAt(i);
-                i--;
+                --i;
             }
             else
                 traveller.previousOffsetFromPortal = offsetFromPortal;
