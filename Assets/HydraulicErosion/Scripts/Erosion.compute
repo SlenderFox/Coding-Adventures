@@ -1,0 +1,158 @@
+﻿#pragma kernel SimulateDroplet
+#define MAX_VALUE 999999
+
+RWStructuredBuffer<float> heightMap;
+uint resolution;
+uint maxLifetime;
+float erosionSpeed;
+float evaporationRate;
+float water;
+/*
+float GetHeightFromHeightMap(uint2 pPos)
+{
+	if (pPos.x < 0 || pPos.x >= resolution || pPos.y < 0 || pPos.y >= resolution)
+		return 0;
+
+	return heightMap[pPos.x + pPos.y * resolution];
+}
+
+float GetHeightFromHeightMap(uint pPosX, uint pPosY)
+{
+	if (pPosX < 0 || pPosX >= resolution || pPosY < 0 || pPosY >= resolution)
+		return 0;
+
+	return heightMap[pPosX + pPosY * resolution];
+}
+
+void AddHeightOnHeightMap(uint2 pPos, float pValue)
+{
+	if (pPos.x < 0 || pPos.x >= resolution || pPos.y < 0 || pPos.y >= resolution)
+		return;
+
+	heightMap[pPos.x + pPos.y * resolution] += pValue;
+	if (heightMap[pPos.x + pPos.y * resolution] < 0)
+		heightMap[pPos.x + pPos.y * resolution] = 0;
+}
+
+float2 Rand_2_0004(float2 uv)
+{
+	float noiseX = (frac(sin(dot(uv, float2(12.9898, 78.233))) * 43758.5453));
+	float noiseY = (frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453));
+	return float2(noiseX, noiseY) * 0.004;
+}
+
+void DoDropletSimulation(uint id)
+{
+	// Initialise some data for the droplet
+	//float2 temp = { id, id * resolution };
+	//uint2 position = { 0, 0 };
+	uint2 position = { id % resolution, id / resolution };
+	float height = GetHeightFromHeightMap(position);
+	float prevHeight = MAX_VALUE;
+	float deltaHeight;
+	float sediment;
+	float sedimentCapacity = maxSedimentCapacity;
+	float sedimentTaken;
+	float speed;
+	float deltaSpeed;
+	float nearbyHeight;
+
+	uint2 lowestPos = { MAX_VALUE, MAX_VALUE };
+	float lowestHeight = MAX_VALUE;
+	int2 posCycle = { 0, 0 };
+	float cycleHeight = 0;
+
+	for (uint i = 0; i < maxLifetime; i++)
+	{
+		prevHeight = height;
+
+		// Calculate the lowest adjacent point and update the droplet position to it
+		for (int j = 0; j < 8; j++)
+		{
+			switch (j)
+			{
+			case 0:
+				posCycle.x = position.x - 1;
+				posCycle.y = position.y - 1;
+				break;
+			case 1:
+				posCycle.x = position.x;
+				posCycle.y = position.y - 1;
+				break;
+			case 2:
+				posCycle.x = position.x + 1;
+				posCycle.y = position.y - 1;
+				break;
+			case 3:
+				posCycle.x = position.x + 1;
+				posCycle.y = position.y;
+				break;
+			case 4:
+				posCycle.x = position.x + 1;
+				posCycle.y = position.y + 1;
+				break;
+			case 5:
+				posCycle.x = position.x;
+				posCycle.y = position.y + 1;
+				break;
+			case 6:
+				posCycle.x = position.x - 1;
+				posCycle.y = position.y + 1;
+				break;
+			case 7:
+			default:
+				posCycle.x = position.x - 1;
+				posCycle.y = position.y;
+				break;
+			}
+
+			cycleHeight = GetHeightFromHeightMap(posCycle);
+			if (cycleHeight < height && height < lowestHeight);
+			{
+				lowestPos = posCycle;
+				lowestHeight = cycleHeight;
+			}
+		}
+
+		// Droplet is at the lowest position of the surrounding spots
+		if (GetHeightFromHeightMap(position) <= GetHeightFromHeightMap(lowestPos))
+		{
+			AddHeightOnHeightMap(position, sediment);
+			break;
+		}
+
+		position = lowestPos;
+		height = GetHeightFromHeightMap(position);
+		deltaHeight = prevHeight - height;
+		deltaSpeed = deltaHeight * speed;
+		speed += deltaSpeed;
+		sedimentCapacity = (water * speed < maxSedimentCapacity)
+			? water * speed : maxSedimentCapacity;
+
+		if (sediment > maxSedimentCapacity)
+		{
+			// Deposit some soil
+			AddHeightOnHeightMap(position, sediment - sedimentCapacity);
+			sediment = sedimentCapacity;
+		}
+		else
+		{
+			// Erode some soil
+			sedimentTaken = min(erosionSpeed, deltaHeight);
+			sediment += sedimentTaken;
+			AddHeightOnHeightMap(position, -sedimentTaken);
+		}
+		// Evaporate some water
+		water -= min(evaporationRate, water);
+	}
+}
+*/
+[numthreads(1024,1,1)]
+void SimulateDroplet(uint3 id : SV_DispatchThreadID)
+{
+	//DoDropletSimulation(id.x);
+
+	//uint2 testPosition = { id.x % resolution, id.x / resolution };
+	//heightMap[testPosition.x + testPosition.y * resolution] = 0;
+	//heightMap[id.x] = 0;
+}
