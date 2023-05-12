@@ -1,2 +1,2 @@
-# Unity-CodingAdventures
-A unity project where I can mess around with cool things I discovered
+# Coding Adventures
+A unity project to mess around with cool things
