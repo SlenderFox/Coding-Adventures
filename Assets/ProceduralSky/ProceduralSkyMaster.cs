@@ -1,6 +1,6 @@
 using UnityEngine;
 
-[ExecuteInEditMode, ImageEffectAllowedInSceneView]
+[ExecuteInEditMode]
 public class ProceduralSkyMaster : MonoBehaviour
 {
     [SerializeField]
@@ -23,7 +23,7 @@ public class ProceduralSkyMaster : MonoBehaviour
     private Transform m_tPlanet = null;
     [SerializeField]
     private Transform m_tSun = null;
-    
+
     private Camera m_cCamera = null;
     private Material m_mShaderMat = null;
 
@@ -52,7 +52,7 @@ public class ProceduralSkyMaster : MonoBehaviour
             Graphics.Blit(source, destination);
             return;
         }
-        
+
         if (m_mShaderMat == null)
             m_mShaderMat = new Material(Shader.Find("Hidden/ProceduralSkyShader"));
 
