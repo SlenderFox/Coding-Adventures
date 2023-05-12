@@ -1,40 +1,45 @@
 ﻿using UnityEngine;
 using UnityEditor;
 
-[CustomEditor(typeof(HydraulicErosion))]
-public class HydraulicErosionEditor : Editor
+namespace HydraulicErosionProj
 {
-    HydraulicErosion m_heScript;
+	[CustomEditor(typeof(HydraulicErosionMaster))]
+	public class HydraulicErosionEditor: Editor
+	{
+		HydraulicErosionMaster m_heScript;
 
-    private void OnEnable()
-    {
-        m_heScript = (HydraulicErosion)target;
-    }
+		private void OnEnable()
+		{
+			m_heScript = (HydraulicErosionMaster)target;
+		}
 
-    public override void OnInspectorGUI()
-    {
-        DrawDefaultInspector();
+		public override void OnInspectorGUI()
+		{
+			DrawDefaultInspector();
 
-        GUILayout.Space(8);
+			GUILayout.Space(8);
 
-        if (GUILayout.Button("Generate New Heightmap"))
-        {
-            m_heScript.BtnGenerateNewHeightmap();
-        }
+			if (GUILayout.Button("Generate Heightmap"))
+			{
+				m_heScript.Btn_GenerateHeightMap();
+			}
 
-        if (GUILayout.Button($"Run Erosion Sequential ({m_heScript.GetNumberOfDroplets()} iterations)"))
-        {
-            m_heScript.BtnRunErosion();
-        }
+			if (GUILayout.Button("Build Mesh"))
+			{
+				m_heScript.Btn_RebuildMesh();
+			}
 
-        if (GUILayout.Button($"Run Erosion Compute Shader ({m_heScript.GetComputeShaderThreads()} iterations)"))
-        {
-            m_heScript.BtnRunErosionComputeShader();
-        }
+			string numDroplets = m_heScript.m_erosionScript.GetNumberOfDroplets().ToString();
+			if (GUILayout.Button($"Run Erosion CPU ({numDroplets} droplets)"))
+			{
+				m_heScript.Btn_RunErosionCpu();
+			}
 
-        if (GUILayout.Button("Rebuild Mesh"))
-        {
-            m_heScript.BtnRebuildMesh();
-        }
-    }
+			string numGroups = m_heScript.m_erosionScript.GetComputeShaderThreads().ToString();
+			if (GUILayout.Button($"Run Erosion GPU ({numGroups} droplets)"))
+			{
+				m_heScript.Btn_RunErosionGpu();
+			}
+		}
+	}
 }
