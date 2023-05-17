@@ -25,11 +25,11 @@ namespace HydraulicErosionProj
 			" full map size will be this number squared")]
 		public ushort m_resolution = 255;
 
-		[Range(0.001f, 100f), Tooltip("How large the map will appear in the world")]
-		public float m_horizontalScale = 20f;
+		[Min(0.001f), Tooltip("How large the map will appear in the world")]
+		public float m_scale = 20f;
 
-		[Range(0.001f, 5f), Tooltip("The intensity of the Perlin noise")]
-		public float m_verticalScale = 2f;
+		[Min(0.001f), Tooltip("The intensity of the Perlin noise")]
+		public float m_intensity = 2f;
 
 		[Range(0.1f, 2f), Tooltip("The size of the Perlin noise")]
 		public float m_noiseScale = 0.7f;
@@ -78,10 +78,10 @@ namespace HydraulicErosionProj
 				{
 					for (int l = 0; l < m_noiseLayers; ++l)
 					{
-						m_heightMap.coords[x, y] += Mathf.PerlinNoise(
+						m_heightMap.coords[x, y] += (Mathf.PerlinNoise(
 							m_noiseOffset[l].x + (x * (l + 1) / m_noiseScale) / m_resolution,
 							m_noiseOffset[l].y + (y * (l + 1) / m_noiseScale) / m_resolution
-						) * m_verticalScale / (l + 1);
+						) - 0.5f) * m_intensity / (l + 1);
 					}
 				}
 			}
@@ -105,9 +105,9 @@ namespace HydraulicErosionProj
 					int i = x + y * m_resolution;
 					// For each vertex the x and z values are offset the all values are scaled
 					vertices[i] = new Vector3(
-						(x - m_resolution * .5f + .5f) / (m_resolution - 1) * m_horizontalScale,
-						m_heightMap.coords[x, y] * m_verticalScale - m_verticalScale,
-						(y - m_resolution * .5f + .5f) / (m_resolution - 1) * m_horizontalScale
+						(x - m_resolution * .5f + .5f) / (m_resolution - 1) * m_scale,
+						m_heightMap.coords[x, y] * m_scale,
+						(y - m_resolution * .5f + .5f) / (m_resolution - 1) * m_scale
 					);
 					uv[i].y = m_heightMap.coords[x, y];  // Tbh I have no idea what this does
 
@@ -127,6 +127,7 @@ namespace HydraulicErosionProj
 			}
 
 			Mesh result = new Mesh();
+			result.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
 			// Apply the new data to the mesh
 			result.vertices = vertices;
 			result.triangles = triangles;
