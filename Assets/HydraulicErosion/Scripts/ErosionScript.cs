@@ -15,17 +15,13 @@ namespace HydraulicErosionProj
 				position = pPosition;
 				height = pHeight;
 				water = pWater;
-				prevHeight = float.PositiveInfinity;
 				sediment = 0;
-				inertia = 0;    // Inertia is just the delta height
 			}
 
 			public Vector2Int position;
 			public float height;
 			public float water;
-			public float prevHeight;
 			public float sediment;
-			public float inertia;
 
 			// Sediment capacity is how much water is left
 		}
@@ -38,6 +34,9 @@ namespace HydraulicErosionProj
 
 		[Range(0.001f, 0.3f), Tooltip("How fast each droplet collects sediment from the ground")]
 		public float m_erosionSpeed = 0.01f;
+
+		[Range(0.001f, 0.3f), Tooltip("How fast each droplet collects sediment from the ground")]
+		public float m_depositionSpeed = 0.01f;
 
 		[Min(0.01f), Tooltip("How much water the droplets will start with," +
 			" more = more sediment carried")]
@@ -53,8 +52,48 @@ namespace HydraulicErosionProj
 			"Droplets simulated = groups * 1024")]
 		public uint m_numGroups = 10;
 
-		public void RunErosion(HydraulicErosionMaster _master, ushort _resolution)
+		private HydraulicErosionMaster m_master;
+
+		private void ModifyAroundArea(Vector2Int _pos, float amount)
 		{
+			// Count how many of the surrounding points are in bounds
+			int surrounding = 8;
+			for (int i = 0; i < 8; ++i)
+			{
+				Vector2Int pos = i switch
+				{
+					0 => new Vector2Int(_pos.x - 1, _pos.y - 1),
+					1 => new Vector2Int(_pos.x,     _pos.y - 1),
+					2 => new Vector2Int(_pos.x + 1, _pos.y - 1),
+					3 => new Vector2Int(_pos.x + 1, _pos.y    ),
+					4 => new Vector2Int(_pos.x + 1, _pos.y + 1),
+					5 => new Vector2Int(_pos.x,     _pos.y + 1),
+					6 => new Vector2Int(_pos.x - 1, _pos.y + 1),
+					7 => new Vector2Int(_pos.x - 1, _pos.y    ),
+					_ => throw new UnityException("Literally how?")
+				};
+
+				if (pos.x < 0
+					|| pos.y < 0
+					|| pos.x > m_master.m_meshGenerator.m_resolution
+					|| pos.y > m_master.m_meshGenerator.m_resolution
+				)
+				{
+					surrounding -= 1;
+				}
+			}
+
+			// Calculate modification ratios
+			float centre = 0;
+			float edge = 0;
+
+			m_master.ModifyHeightMap(_pos, amount);
+		}
+
+		public void RunErosion(ushort _resolution)
+		{
+			Random.InitState((int)(Time.realtimeSinceStartupAsDouble * 10000));
+
 			// Loop through each and every droplet (slow)
 			for (int i = 0; i < m_numDroplets; ++i)
 			{
@@ -63,14 +102,14 @@ namespace HydraulicErosionProj
 					Random.Range(0, _resolution),
 					Random.Range(0, _resolution)
 				);
-				Droplet drop = new Droplet(startPosition, m_startWater, _master.GetFromHeightMap(startPosition));
+				Droplet drop = new Droplet(startPosition, m_startWater, m_master.GetFromHeightMap(startPosition));
 
 				// Each loop is a step in the droplets life (slow)
 				// A break in this loop is equivelant to the droplet dying
 				for (int j = 0; j < m_maxLifetime; ++j)
 				{
 					// Update the previous height
-					drop.prevHeight = drop.height;
+					//drop.prevHeight = drop.height;
 
 					// Calculate the lowest adjacent point and update the droplet position to it
 					Vector2Int lowestPos = new Vector2Int(int.MaxValue, int.MaxValue);
@@ -93,7 +132,7 @@ namespace HydraulicErosionProj
 							7 => new Vector2Int(drop.position.x - 1, drop.position.y    ),
 							_ => throw new UnityException("Droplet direction does not exist")
 						};
-						cycleHeight = _master.GetFromHeightMap(cyclePos);
+						cycleHeight = m_master.GetFromHeightMap(cyclePos);
 						if (cycleHeight < drop.height && cycleHeight < lowestHeight)
 						{
 							lowestPos = cyclePos;
@@ -105,46 +144,42 @@ namespace HydraulicErosionProj
 					if (drop.height <= lowestHeight)
 					{
 						// Disbtribute the sediment to the surrounding points aswell
-						_master.ModifyHeightMap(ref drop, drop.sediment);
+						ModifyAroundArea(drop.position, drop.sediment);
 						break;
 					}
 
-					// Update the droplets position to the lowest adjacent point
-					drop.position = lowestPos;
-					// Update the droplets height
-					drop.height = lowestHeight;
-					// inertia is the delta height
-					drop.inertia = drop.prevHeight - drop.height;
+					float deltaHeight = drop.height - lowestHeight;
 
-					// This is all a mess
-					// Find the delta speed (possibly wrong)
-					//deltaSpeed = -deltaHeight;
-					//// Update the speed
-					//drop.speed += deltaSpeed; // FIX THIS
-					//// Calculate the new sediment capacity based on remaining water and droplet speed
-					//drop.sedimentCapacity = (drop.water * drop.speed < m_fMaxSedimentCapacity)
-					//    ? drop.water * drop.speed : m_fMaxSedimentCapacity;
+					// Update the droplets position to the lowest adjacent point
+					//drop.position = lowestPos;
+					// Update the droplets height
+					//drop.height = lowestHeight;
 
 					// Evaporate some water
 					drop.water -= Mathf.Min(m_evaporationRate, drop.water);
+
+					// TODO: Do the shit where soil is taken and deposited in an area around a point
+					if (drop.sediment < drop.water)
+					{
+						// Erode some soil
+						float toErode = Mathf.Min(m_erosionSpeed, deltaHeight);
+						ModifyAroundArea(drop.position, -toErode);
+					}
+					else
+					{
+						// Deposit some soil
+						float toDeposit = Mathf.Min(m_depositionSpeed, drop.sediment);
+						ModifyAroundArea(drop.position, toDeposit);
+					}
 
 					if (drop.water <= 0)
 					{
 						break;
 					}
 
-					// TODO: Do the shit where soil is taken and deposited in an area around a point
-					if (drop.sediment > drop.water)
-					{
-						// Deposit some soil
-						_master.ModifyHeightMap(ref drop, drop.water - drop.sediment);
-					}
-					else
-					{
-						// Erode some soil
-						float sedimentTaken = Mathf.Min(m_erosionSpeed, drop.inertia);
-						_master.ModifyHeightMap(ref drop, -sedimentTaken);
-					}
+					// Finally move the droplet to the new position
+					drop.position = lowestPos;
+					drop.height = lowestHeight;
 				}
 			}
 		}
@@ -167,6 +202,11 @@ namespace HydraulicErosionProj
 		//	// Retrieve the data and release the buffer
 		//	heightBuffer.GetData(m_heightMap.heightMap);
 		//	heightBuffer.Release();
+		}
+
+		public void SetMaster(HydraulicErosionMaster _master)
+		{
+			m_master = _master;
 		}
 
 		/// <summary>

@@ -10,6 +10,7 @@ namespace HydraulicErosionProj
 
 		private void Awake()
 		{
+			m_erosionScript.SetMaster(this);
 			m_meshGenerator.RandomiseOffset();
 			m_meshGenerator.GenerateHeightMap();
 			SetMesh(m_meshGenerator.GenerateMesh());
@@ -44,40 +45,12 @@ namespace HydraulicErosionProj
 		/// </summary>
 		/// <param name="pPos">The position on the heightmap in 2d space</param>
 		/// <param name="pValue">The value to be added (or subtracted)</param>
-		public void ModifyHeightMap(ref ErosionScript.Droplet _droplet, float _amount)
+		public void ModifyHeightMap(Vector2Int _pos, float _amount)
 		{
-			if (_droplet.position.x < 0
-				|| _droplet.position.y < 0
-				|| _droplet.position.x >= m_meshGenerator.m_resolution
-				|| _droplet.position.y >= m_meshGenerator.m_resolution
-			)
-			{	throw new UnityException("Droplet has gone out of bounds"); }
+			Mathf.Clamp(_pos.x, 0, m_meshGenerator.m_resolution);
+			Mathf.Clamp(_pos.y, 0, m_meshGenerator.m_resolution);
 
-			//if (_amount >= 0)
-			//{
-				// Adding sediment to the terrain
-				m_meshGenerator.m_heightMap.coords[_droplet.position.x, _droplet.position.y] += _amount;
-				_droplet.sediment -= _amount;
-			//}
-			//else
-			//{
-			//	// Removing sediment from the terrain
-			//	//Invert amount if subtraction to make code easier to understand
-			//	_amount = -_amount;
-			//	float terrainHeight = GetHeightFromHeightMap(_droplet.position);
-			//	float difference = terrainHeight - _amount;
-			//	// Prevent from removing too much sediment, creates "bedrock"
-			//	if (difference < 0)
-			//	{
-			//		m_meshGenerator.m_heightMap.coords[_droplet.position.x, _droplet.position.y] -= terrainHeight;
-			//		_droplet.sediment += terrainHeight;
-			//	}
-			//	else
-			//	{
-			//		m_meshGenerator.m_heightMap.coords[_droplet.position.x, _droplet.position.y] -= _amount;
-			//		_droplet.sediment += _amount;
-			//	}
-			//}
+			m_meshGenerator.m_heightMap.coords[_pos.x, _pos.y] += _amount;
 		}
 
 		public void Btn_GenerateHeightMap()
@@ -95,7 +68,7 @@ namespace HydraulicErosionProj
 
 		public void Btn_RunErosionCpu()
 		{
-			m_erosionScript.RunErosion(this, m_meshGenerator.m_resolution);
+			m_erosionScript.RunErosion(m_meshGenerator.m_resolution);
 			SetMesh(m_meshGenerator.GenerateMesh());
 		}
 

@@ -81,7 +81,7 @@ namespace HydraulicErosionProj
 						m_heightMap.coords[x, y] += (Mathf.PerlinNoise(
 							m_noiseOffset[l].x + (x * (l + 1) / m_noiseScale) / m_resolution,
 							m_noiseOffset[l].y + (y * (l + 1) / m_noiseScale) / m_resolution
-						) - 0.5f) * m_intensity / (l + 1);
+						) - 0.0f) * m_intensity / (l + 1);
 					}
 				}
 			}
