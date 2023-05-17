@@ -90,7 +90,8 @@ namespace HydraulicErosionProj
 							4 => new Vector2Int(drop.position.x + 1, drop.position.y + 1),
 							5 => new Vector2Int(drop.position.x,     drop.position.y + 1),
 							6 => new Vector2Int(drop.position.x - 1, drop.position.y + 1),
-							_ => new Vector2Int(drop.position.x - 1, drop.position.y    ),
+							7 => new Vector2Int(drop.position.x - 1, drop.position.y    ),
+							_ => throw new UnityException("Droplet direction does not exist")
 						};
 						cycleHeight = _master.GetFromHeightMap(cyclePos);
 						if (cycleHeight < drop.height && cycleHeight < lowestHeight)
